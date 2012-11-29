@@ -1,0 +1,452 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="generator" content="pandoc">
+  <meta name="author" content="Luca Bolognese">
+  <meta name="dcterms.date" content="2012-12-11">
+  <title>LLiteFs : language friendly literate programming</title>
+  <!--[if lt IE 9]>
+    <script src="http://html5shim.googlecode.com/svn/trunk/html5.js"></script>
+  <![endif]-->
+  <style type="text/css">
+table.sourceCode, tr.sourceCode, td.lineNumbers, td.sourceCode {
+  margin: 0; padding: 0; vertical-align: baseline; border: none; }
+table.sourceCode { width: 100%; }
+td.lineNumbers { text-align: right; padding-right: 4px; padding-left: 4px; color: #aaaaaa; border-right: 1px solid #aaaaaa; }
+td.sourceCode { padding-left: 5px; }
+code > span.kw { color: #007020; font-weight: bold; }
+code > span.dt { color: #902000; }
+code > span.dv { color: #40a070; }
+code > span.bn { color: #40a070; }
+code > span.fl { color: #40a070; }
+code > span.ch { color: #4070a0; }
+code > span.st { color: #4070a0; }
+code > span.co { color: #60a0b0; font-style: italic; }
+code > span.ot { color: #007020; }
+code > span.al { color: #ff0000; font-weight: bold; }
+code > span.fu { color: #06287e; }
+code > span.er { color: #ff0000; font-weight: bold; }
+  </style>
+  <link href="data:text/css,body%20%7B%0D%0A%20%20%20%20margin%3A%20auto%3B%0D%0A%20%20%20%20padding%2Dright%3A%201em%3B%0D%0A%20%20%20%20padding%2Dleft%3A%201em%3B%0D%0A%20%20%20%20max%2Dwidth%3A%2050em%3B%20%2F%2A%20Was%2044%2A%2F%0D%0A%20%20%20%20border%2Dleft%3A%201px%20solid%20black%3B%0D%0A%20%20%20%20border%2Dright%3A%201px%20solid%20black%3B%0D%0A%20%20%20%20color%3A%20black%3B%0D%0A%20%20%20%20font%2Dfamily%3A%20Verdana%2C%20sans%2Dserif%3B%0D%0A%20%20%20%20font%2Dsize%3A%20100%25%3B%0D%0A%20%20%20%20line%2Dheight%3A%20140%25%3B%0D%0A%20%20%20%20color%3A%20%23333%3B%20%0D%0A%7D%0D%0Apre%20%7B%0D%0A%20%20%20%20border%3A%201px%20dotted%20gray%3B%0D%0A%20%20%20%20background%2Dcolor%3A%20%23ececec%3B%0D%0A%20%20%20%20color%3A%20%231111111%3B%0D%0A%20%20%20%20padding%3A%200%2E5em%3B%0D%0A%7D%0D%0Acode%20%7B%0D%0A%20%20%20%20font%2Dfamily%3A%20monospace%3B%0D%0A%20%20%20%20font%2Dsize%3A%2012px%3B%0D%0A%20%20%20%20line%2Dheight%3A%201%2E3%3B%0D%0A%7D%0D%0Ah1%20a%2C%20h2%20a%2C%20h3%20a%2C%20h4%20a%2C%20h5%20a%20%7B%20%0D%0A%20%20%20%20text%2Ddecoration%3A%20none%3B%0D%0A%20%20%20%20color%3A%20%237a5ada%3B%20%0D%0A%7D%0D%0Ah1%2C%20h2%2C%20h3%2C%20h4%2C%20h5%20%7B%20font%2Dfamily%3A%20verdana%3B%0D%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20font%2Dweight%3A%20bold%3B%0D%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20border%2Dbottom%3A%201px%20dotted%20black%3B%0D%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20color%3A%20%237a5ada%3B%20%7D%0D%0Ah1%20%7B%0D%0A%20%20%20%20%20%20%20%20font%2Dsize%3A%20130%25%3B%0D%0A%7D%0D%0A%0D%0Ah2%20%7B%0D%0A%20%20%20%20%20%20%20%20font%2Dsize%3A%20110%25%3B%0D%0A%7D%0D%0A%0D%0Ah3%20%7B%0D%0A%20%20%20%20%20%20%20%20font%2Dsize%3A%2095%25%3B%0D%0A%7D%0D%0A%0D%0Ah4%20%7B%0D%0A%20%20%20%20%20%20%20%20font%2Dsize%3A%2090%25%3B%0D%0A%20%20%20%20%20%20%20%20font%2Dstyle%3A%20italic%3B%0D%0A%7D%0D%0A%0D%0Ah5%20%7B%0D%0A%20%20%20%20%20%20%20%20font%2Dsize%3A%2090%25%3B%0D%0A%20%20%20%20%20%20%20%20font%2Dstyle%3A%20italic%3B%0D%0A%7D%0D%0A%0D%0Ah1%2Etitle%20%7B%0D%0A%20%20%20%20%20%20%20%20font%2Dsize%3A%20200%25%3B%0D%0A%20%20%20%20%20%20%20%20line%2Dheight%3A%20102%25%3B%0D%0A%20%20%20%20%20%20%20%20font%2Dweight%3A%20bold%3B%0D%0A%20%20%20%20%20%20%20%20padding%2Dtop%3A%200%2E2em%3B%0D%0A%20%20%20%20%20%20%20%20padding%2Dbottom%3A%200%2E2em%3B%0D%0A%20%20%20%20%20%20%20%20text%2Dalign%3A%20left%3B%0D%0A%20%20%20%20%20%20%20%20border%3A%200%3B%0D%0A%7D%0D%0A%0D%0Adt%20code%20%7B%0D%0A%20%20%20%20%20%20%20%20font%2Dweight%3A%20bold%3B%0D%0A%7D%0D%0Add%20p%20%7B%0D%0A%20%20%20%20%20%20%20%20margin%2Dtop%3A%200%3B%0D%0A%7D%0D%0A%0D%0A%23footer%20%7B%0D%0A%20%20%20%20%20%20%20%20padding%2Dtop%3A%201em%3B%0D%0A%20%20%20%20%20%20%20%20font%2Dsize%3A%2070%25%3B%0D%0A%20%20%20%20%20%20%20%20color%3A%20gray%3B%0D%0A%20%20%20%20%20%20%20%20text%2Dalign%3A%20center%3B%0D%0A%7D%0D%0A" rel="stylesheet">
+</head>
+<body>
+<header>
+<h1 class="title">LLiteFs : language friendly literate programming</h1>
+<h2 class="author">Luca Bolognese</h2>
+<h3 class="date">22/11/2012</h3>
+</header>
+<nav id="TOC">
+<ul>
+<li><a href="#main-ideas"><span class="toc-section-number">1</span> Main ideas</a><ul>
+<li><a href="#unhappiness-with-existing-tools"><span class="toc-section-number">1.1</span> Unhappiness with existing tools</a></li>
+<li><a href="#a-more-modern-interpretation"><span class="toc-section-number">1.2</span> A more modern interpretation</a></li>
+<li><a href="#multiprogramming-multi-document-format"><span class="toc-section-number">1.3</span> Multiprogramming, multi-document format</a></li>
+<li><a href="#language-limitations"><span class="toc-section-number">1.4</span> Language limitations</a></li>
+<li><a href="#an-aside-forward-declaring-functions-in-f"><span class="toc-section-number">1.5</span> An aside: forward declaring functions in F#</a></li>
+</ul></li>
+<li><a href="#implementation"><span class="toc-section-number">2</span> Implementation</a><ul>
+<li><a href="#translation-passes"><span class="toc-section-number">2.1</span> Translation passes</a></li>
+<li><a href="#program-parser"><span class="toc-section-number">2.2</span> Program Parser</a></li>
+<li><a href="#narrative-comments-phases"><span class="toc-section-number">2.3</span> Narrative comments phases</a></li>
+<li><a href="#remove-the-empty-blocks"><span class="toc-section-number">2.4</span> Remove the empty blocks</a></li>
+<li><a href="#merge-blocks"><span class="toc-section-number">2.5</span> Merge blocks</a></li>
+<li><a href="#managing-the-first-block"><span class="toc-section-number">2.6</span> Managing the first block</a></li>
+<li><a href="#managing-the-last-block"><span class="toc-section-number">2.7</span> Managing the last block</a></li>
+<li><a href="#managing-the-intermediate-blocks"><span class="toc-section-number">2.8</span> Managing the intermediate blocks</a></li>
+<li><a href="#putting-everything-back-together"><span class="toc-section-number">2.9</span> Putting everything back together</a></li>
+<li><a href="#parsing-command-line-arguments"><span class="toc-section-number">2.10</span> Parsing command line arguments</a></li>
+<li><a href="#main-method"><span class="toc-section-number">2.11</span> Main method</a></li>
+</ul></li>
+</ul>
+</nav>
+<h1 id="main-ideas"><a href="#TOC"><span class="header-section-number">1</span> Main ideas</a></h1>
+<p>My interest in <a href="http://en.wikipedia.org/wiki/Literate_programming">literate programming</a> comes from some realizations on my part:</p>
+<ul>
+<li>When I go back to code that I have written some time ago, I don’t remember my reasoning</li>
+<li>When I write a blog post, my code seems to be better. Perhaps explaining things to people encourages me to be more precise</li>
+<li>I like to think top down, but the compiler forces me to write code bottom up, starting from details and going to higher level concepts</li>
+</ul>
+<h2 id="unhappiness-with-existing-tools"><a href="#TOC"><span class="header-section-number">1.1</span> Unhappiness with existing tools</a></h2>
+<p>Many of the existing literate programming tools work similarly to the original <a href="http://www-cs-faculty.stanford.edu/~uno/cweb.html">CWeb</a>.</p>
+<ul>
+<li>They have a tangle program that goes over your file and extract something that the compiler can understand</li>
+<li>They have a weave program that extracts from your file something that the document generator can understand</li>
+</ul>
+<p>This scheme has the unfortunate limitation of breaking your code editor. Given that your file is not a valid code file anymore, the editor starts misbehaving (i.e. intellisense breaks). The debugger starts to get confused (albeit people tried to remediate that with cleaver use of <code>#line</code>. If your language has an interactive console, that would not work either.</p>
+<h2 id="a-more-modern-interpretation"><a href="#TOC"><span class="header-section-number">1.2</span> A more modern interpretation</a></h2>
+<p>The main idea of this program is to add your narrative (in markdown format) to the comment part of a code file. This keeps editor and debugger working.</p>
+<p>But simply doing so it’s not enough. The code would become difficult to read because of the need to clearly indicate which parts are code-parts. Also there are some other refactorings, explained later, that needs to be applied for the sake of producing a pleasurable document.</p>
+<p>Hence the weave phase as been retained and what you are reading is the program that go over your code file and extracts a nicely formatted markdown file that can then be translated to HTML, PDF, latex, etc…</p>
+<p><em>So the document you are reading is the program itself.</em></p>
+<h2 id="multiprogramming-multi-document-format"><a href="#TOC"><span class="header-section-number">1.3</span> Multiprogramming, multi-document format</a></h2>
+<p>An attempt has be made to make the program work for any programming language and any documentation format, with the former being more of a priority given that tools like <a href="http://johnmacfarlane.net/pandoc/">Pandoc</a> can translate easily between different markup formats.</p>
+<p>Some extensions to the standard markdown format have been used to produce nicer output (i.e. code blocks, titles, …). These work in Pandoc and probably many other markdown processor. It seems that the community is standardizing on a useful superset of markdown.</p>
+<p>This scheme assumes that there is a special comment tag that can be use to differentiate narrative content from other content, for example:</p>
+<ul>
+<li>in F#, it is (* * .. * *) without the space in the middle</li>
+<li>in C, C++ /** .. *//</li>
+</ul>
+<h2 id="language-limitations"><a href="#TOC"><span class="header-section-number">1.4</span> Language limitations</a></h2>
+<p>One of the main tenets of literate programming is that the code should be written in the order that facilitates exposition to a human reader, not in the order that makes the compiler happy. This is very important.</p>
+<p>If you have written a blog post or tried to explain a codebase to a new joiner, you must have noticed that you don’t start from the top of the file and go down, but jump here and there trying to better explain the main concepts. Literate programming says that you should write code the same way. But in our version of it, the compiler needs to be kept happy because the literate file <em>is</em> the code file.</p>
+<p>Some ingenuity is required to achieve such goal:</p>
+<ul>
+<li>In C and C++ you can forward declare functions and classes, also class members can be in any order</li>
+<li>In C#, Java, VB.NET, F# (the object oriented part) you can write class members in any order</li>
+<li>In the functional part of F# you do have a problem (see below)</li>
+</ul>
+<h2 id="an-aside-forward-declaring-functions-in-f"><a href="#TOC"><span class="header-section-number">1.5</span> An aside: forward declaring functions in F#</a></h2>
+<p>You can achieve something somehow similar to forward declaration by this dirty trick.</p>
+<pre class="sourceCode fsharp"><code class="sourceCode fsharp"><span class="ot">module</span> LLiteFs
+
+<span class="kw">let</span> declare&lt;'a&gt;  = <span class="kw">ref</span> Unchecked<span class="kw">.</span>defaultof&lt;'a&gt;</code></pre>
+<p>Whenever you want to do a forward declaration of a function , or variable, you can type:</p>
+<pre class="sourceCode fsharp"><code class="sourceCode fsharp"><span class="kw">let</span> testDeclare() =
+
+    <span class="kw">let</span> add = declare&lt;float -&gt; <span class="dt">float</span>&gt;
+
+    <span class="kw">let</span> ``function I want <span class="kw">to</span> explain that depends on add`` nums = nums |&gt; Seq<span class="kw">.</span>map !add</code></pre>
+<p>This creates a ref to a function from float to float. It looks a bit like an Haskell type declaration. You can then use such function as if it were actually define and delay his definition to a later point in time when you are ready to explain it.</p>
+<p>When you are ready, you can then do:</p>
+<pre class="sourceCode fsharp"><code class="sourceCode fsharp">    add := <span class="kw">fun</span> x -&gt; x + 1.</code></pre>
+<p>And use it like any normal function.</p>
+<pre class="sourceCode fsharp"><code class="sourceCode fsharp">    printfn <span class="st">&quot;%f&quot;</span> (!add 3.)</code></pre>
+<p>The syntax is not too bad. You get that often-sought Haskell like explicit type declaration and you can regex the codebase to create an index at the end of the program (not done yet).</p>
+<p>But is it too slow? After all, there is one more indirection call for each function call.</p>
+<p>Let’s test it: enable #time in F# interactive and execute timeNormalF and timeIndirectF varying sleepTime and howManyIer until you convince yourself that it is ok.</p>
+<pre class="sourceCode fsharp"><code class="sourceCode fsharp">    <span class="kw">let</span> sleepTime   = 50
+    <span class="kw">let</span> howManyIter = 100
+    <span class="kw">let</span> normalF x   = System<span class="kw">.</span>Threading<span class="kw">.</span>Thread<span class="kw">.</span>Sleep sleepTime
+    <span class="kw">let</span> indirectF   = declare&lt;int -&gt; <span class="dt">unit</span>&gt;
+    indirectF      := <span class="kw">fun</span> x -&gt; System<span class="kw">.</span>Threading<span class="kw">.</span>Thread<span class="kw">.</span>Sleep sleepTime
+     
+    <span class="kw">let</span> timeNormalF     = [1..howManyIter] |&gt; List<span class="kw">.</span>iter normalF
+    <span class="kw">let</span> timeIndirectF   = [1..howManyIter] |&gt; List<span class="kw">.</span>iter !indirectF
+    ()</code></pre>
+<p>Unfortunately, there is a big problem with all of the above: it doesn’t work with generic functions and curried function invocations. The code below works in all cases, but it is ugly for the user to use. In this program I’ve used the beautiful, but incorrect, syntax.</p>
+<pre class="sourceCode fsharp"><code class="sourceCode fsharp"><span class="kw">type</span> Literate() =
+    <span class="kw">static</span> <span class="kw">member</span> Declare&lt;'a, 'b&gt;  (<span class="kw">ref</span> : obj <span class="kw">ref</span>) (x : 'a) : 'b =
+        unbox &lt;| (unbox&lt;obj -&gt; obj&gt; !<span class="kw">ref</span>) x
+    <span class="kw">static</span> <span class="kw">member</span> Define&lt;'a, 'b&gt; (func : 'a -&gt; 'b) (<span class="kw">ref</span> : obj <span class="kw">ref</span>) (f : 'a -&gt; 'b) =
+        <span class="kw">ref</span> := box (unbox&lt;'a&gt; &gt;&gt; f &gt;&gt; box)
+
+//<span class="co">//////////////////////////////////</span>
+    
+<span class="kw">let</span> <span class="kw">rec</span> id (x : 'a) : 'a = Literate<span class="kw">.</span>Declare idImpl x
+<span class="kw">and</span> idImpl = <span class="kw">ref</span> <span class="kw">null</span>
+
+<span class="kw">let</span> f () = id 100 + id 200
+
+Literate<span class="kw">.</span>Define id idImpl (<span class="kw">fun</span> x -&gt; x)
+
+<span class="kw">let</span> r = f()</code></pre>
+<h1 id="implementation"><a href="#TOC"><span class="header-section-number">2</span> Implementation</a></h1>
+<p>This is just a quick prototype done for the sake of experimenting with the concepts. It’s not production quality.</p>
+<p>At the core, this program is a simple translator that takes some code text and return a valid markdown text. There is a global concept of options that need to be accessible from everywhere in the program and a general concept of language that represent the language we are trying to parse.</p>
+<p>At this point, we don’t know what the type for options is, so we’ll use obj.</p>
+<pre class="sourceCode fsharp"><code class="sourceCode fsharp"><span class="kw">let</span> language    = declare&lt;string&gt;
+<span class="kw">let</span> options     = declare&lt;Map&lt;string, obj&gt;&gt;
+<span class="kw">let</span> translate   = declare&lt;string -&gt; <span class="dt">string</span>&gt;</code></pre>
+<h2 id="translation-passes"><a href="#TOC"><span class="header-section-number">2.1</span> Translation passes</a></h2>
+<p>The various translation phases are described below. I define narrative blocks (N) as the ones comprises inside the special start comment tags and end comment tag (excluding such tags). Code blocks (C) are all the rest.</p>
+<p>We need a function that takes a string and returns a list with the various blocks, so that we can then play with them.</p>
+<pre class="sourceCode fsharp"><code class="sourceCode fsharp"><span class="kw">type</span> Block =
+| Code      <span class="kw">of</span> <span class="dt">string</span>
+| Narrative <span class="kw">of</span> <span class="dt">string</span>
+
+<span class="kw">let</span> blockize = declare&lt;string -&gt; Block list&gt;</code></pre>
+<h2 id="program-parser"><a href="#TOC"><span class="header-section-number">2.2</span> Program Parser</a></h2>
+<p>I could have used regular expressions to parse the program, but it seemed ugly. I could also have used FsParsec, but that brings with it an additional dll. So I decided to roll my own parser. This has several problems:</p>
+<ul>
+<li>It doesn’t report errors nicely</li>
+<li>It is probably very slow</li>
+<li>It doesn’t allow narrative comments inside comments, in particular it doesn’t allow the opening comment</li>
+<li>It doesn’t allow opening comments in the program code (not even inside a string)</li>
+</ul>
+<p>The latter in particular is troublesome. You’ll need to use a trick in the code (i.e. concatenating strings) to foul this program in not seeing an opening comment, but it is inconvenient.</p>
+<p>With all of that, it works for the sake of trying out this style of programming.</p>
+<p>First we need to define options that help us in parsing different languages. We need to know which special syntax each language uses to represent the opening and closing of a narrative comment.</p>
+<pre class="sourceCode fsharp"><code class="sourceCode fsharp"><span class="kw">type</span> Comments = {Opening : <span class="dt">string</span>; Closing : <span class="dt">string</span> }
+
+options := [
+            <span class="st">&quot;fsharp_comments&quot;</span>, {Opening = <span class="st">&quot;(*&quot;</span> + <span class="st">&quot;*&quot;</span>; Closing = <span class="st">&quot;*&quot;</span> + <span class="st">&quot;*)&quot;</span>} :&gt; obj
+            <span class="st">&quot;c_comments&quot;</span>     , {Opening = <span class="st">&quot;/**&quot;</span>; Closing = <span class="st">&quot;**/&quot;</span>} :&gt; obj
+            <span class="st">&quot;cpp_comments&quot;</span> , {Opening = <span class="st">&quot;/**&quot;</span>; Closing = <span class="st">&quot;**/&quot;</span>} :&gt; obj
+            <span class="st">&quot;csharp_comments&quot;</span>, {Opening = <span class="st">&quot;/**&quot;</span>; Closing = <span class="st">&quot;**/&quot;</span>} :&gt; obj
+            <span class="st">&quot;java_comments&quot;</span>  , {Opening = <span class="st">&quot;/**&quot;</span>; Closing = <span class="st">&quot;**/&quot;</span>} :&gt; obj
+           ] |&gt; Map<span class="kw">.</span>ofList
+
+<span class="kw">let</span> getOpening () = ((!options |&gt; Map<span class="kw">.</span>find (!language + <span class="st">&quot;_comments&quot;</span>)) :?&gt; Comments).Opening
+                    |&gt; List<span class="kw">.</span>ofSeq
+<span class="kw">let</span> getClosing () = ((!options |&gt; Map<span class="kw">.</span>find (!language + <span class="st">&quot;_comments&quot;</span>)) :?&gt; Comments).Closing
+                    |&gt; List<span class="kw">.</span>ofSeq</code></pre>
+<p>TODO: review these algorithms for performance when large files are parsed</p>
+<pre class="sourceCode fsharp"><code class="sourceCode fsharp"><span class="kw">let</span> startsList commentTag l =
+    <span class="kw">let</span> c   = System<span class="kw">.</span>String(List<span class="kw">.</span>toArray commentTag)
+    <span class="kw">let</span> t   = System<span class="kw">.</span>String (List<span class="kw">.</span>toArray l)
+    t.StartsWith c
+
+<span class="kw">let</span> isOpening l =
+    <span class="kw">let</span> o   = getOpening()
+    startsList o l
+    
+<span class="kw">let</span> isClosing l =
+    <span class="kw">let</span> o   = getClosing()
+    startsList o l
+
+<span class="kw">let</span> remainingOpen l =
+    <span class="kw">let</span> o   = getOpening()
+    <span class="kw">if</span> (List<span class="kw">.</span>length l) &lt;= o.Length
+        <span class="kw">then</span> []
+        <span class="kw">else</span> l |&gt; List<span class="kw">.</span>ofSeq |&gt; Seq<span class="kw">.</span>skip o.Length |&gt; Seq<span class="kw">.</span>toList  
+
+<span class="kw">let</span> remainingClose l =
+    <span class="kw">let</span> o   = getClosing()
+    <span class="kw">if</span> (List<span class="kw">.</span>length l) &lt;= o.Length
+        <span class="kw">then</span> []
+        <span class="kw">else</span> l |&gt; List<span class="kw">.</span>ofSeq |&gt; Seq<span class="kw">.</span>skip o.Length |&gt; Seq<span class="kw">.</span>toList  
+    </code></pre>
+<p>This is a pretty standard lexer / parser combination. Unfortunately it doesn’t manage errors in a graceful way. TODO: consider moving to FSParsec or add error management</p>
+<pre class="sourceCode fsharp"><code class="sourceCode fsharp"><span class="kw">type</span> Token =
+| OpenComment
+| CloseComment
+| Text <span class="kw">of</span> <span class="dt">string</span>
+
+<span class="kw">let</span> tokenize source =
+
+    <span class="kw">let</span> <span class="kw">rec</span> text acc = <span class="kw">function</span>
+        | t <span class="kw">when</span> isOpening t        -&gt; acc, t 
+        | t <span class="kw">when</span> isClosing t        -&gt; acc, t
+        | c :: t                    -&gt; text (acc + c.ToString()) t
+        | []                        -&gt; acc, [] 
+    <span class="kw">let</span> <span class="kw">rec</span> tokenize' acc = <span class="kw">function</span>
+        | []                        -&gt; List<span class="kw">.</span>rev acc
+        | t <span class="kw">when</span> isOpening t        -&gt; tokenize' (OpenComment::acc)  (remainingOpen t)
+        | t <span class="kw">when</span> isClosing t        -&gt; tokenize' (CloseComment::acc) (remainingClose t)
+        | t                         -&gt;
+            <span class="kw">let</span> s, t'= text <span class="st">&quot;&quot;</span> t
+            tokenize' (Text(s) :: acc) t'
+
+    tokenize' [] (List<span class="kw">.</span>ofSeq source)
+
+<span class="kw">type</span> Chunk =
+| NarrativeChunk    <span class="kw">of</span> Token list
+| CodeChunk         <span class="kw">of</span> Token list
+
+<span class="kw">let</span> parse source =
+
+    <span class="kw">let</span> <span class="kw">rec</span> parseNarrative acc = <span class="kw">function</span>
+        | OpenComment::t        -&gt;
+            failwith <span class="st">&quot;Don't open narrative comments inside narrative comments&quot;</span>
+        | CloseComment::t       -&gt; acc, t
+        | Text(s)::t            -&gt; parseNarrative (Text(s)::acc) t
+        | []                    -&gt; failwith <span class="st">&quot;You haven't closed your last narrative comment&quot;</span>
+
+    <span class="kw">let</span> <span class="kw">rec</span> parseCode acc = <span class="kw">function</span>
+        | OpenComment::t <span class="kw">as</span> t'  -&gt; acc, t'
+        | CloseComment::t       -&gt; parseCode (CloseComment::acc) t
+        | Text(s)::t            -&gt; parseCode (Text(s)::acc) t
+        | []                    -&gt; acc, []
+    <span class="kw">let</span> <span class="kw">rec</span> parse' acc = <span class="kw">function</span>
+        | OpenComment::t    -&gt;
+            <span class="kw">let</span> narrative, t' = parseNarrative [] t
+            parse' (NarrativeChunk(narrative)::acc) t' 
+        | Text(s)::t        -&gt;
+            <span class="kw">let</span> code, t' = parseCode [Text(s)] t
+            parse' (CodeChunk(code)::acc) t'
+        | CloseComment::t   -&gt;
+            failwith <span class="st">&quot;Don't insert a close narrative comment at the start of your program&quot;</span>
+        | []                -&gt; List<span class="kw">.</span>rev acc
+
+    parse' [] (List<span class="kw">.</span>ofSeq source)</code></pre>
+<p>The flattening part of the algorithm is a bit unusual. At this point we have a parse tree, but we want to reduce it to two simple node types containing all the text. TODO: consider managing nested comments and comments in strings (the latter has to happen in earlier phases)</p>
+<pre class="sourceCode fsharp"><code class="sourceCode fsharp"> 
+<span class="kw">let</span> flatten chunks =
+    <span class="kw">let</span> tokenToStringNarrative = <span class="kw">function</span>
+    | OpenComment | CloseComment    -&gt; failwith <span class="st">&quot;Narrative comments cannot be nested&quot;</span>
+    | Text(s)                       -&gt; s
+
+    <span class="kw">let</span> tokenToStringCode = <span class="kw">function</span>
+    | OpenComment                   -&gt; failwith <span class="st">&quot;Open narrative comment cannot be in code&quot;</span>
+    | CloseComment                  -&gt; <span class="dt">string</span>(getClosing () |&gt; List<span class="kw">.</span>toArray)
+    | Text(s)                       -&gt; s
+
+    <span class="kw">let</span> flattenChunk = <span class="kw">function</span>
+    | NarrativeChunk(tokens)             -&gt;
+        Narrative(tokens |&gt; List<span class="kw">.</span>fold (<span class="kw">fun</span> state token -&gt; state + tokenToStringNarrative token) <span class="st">&quot;&quot;</span>)
+    | CodeChunk(tokens)                  -&gt;
+        Code(tokens |&gt; List<span class="kw">.</span>fold (<span class="kw">fun</span> state token -&gt; state + tokenToStringCode token) <span class="st">&quot;&quot;</span>)
+
+    chunks |&gt; List<span class="kw">.</span>fold (<span class="kw">fun</span> state chunk -&gt; flattenChunk chunk :: state) [] |&gt; List<span class="kw">.</span>rev</code></pre>
+<p>We are getting there, now we have a list of blocks we can operate upon</p>
+<pre class="sourceCode fsharp"><code class="sourceCode fsharp">blockize := (tokenize &gt;&gt; parse &gt;&gt; flatten)    
+ </code></pre>
+<h2 id="narrative-comments-phases"><a href="#TOC"><span class="header-section-number">2.3</span> Narrative comments phases</a></h2>
+<p>We need to process all the blocks by adding all the code tags in the right places and removing all empty blocks.</p>
+<pre class="sourceCode fsharp"><code class="sourceCode fsharp"><span class="kw">type</span> Phase = Block array -&gt; Block array
+
+<span class="kw">let</span> processFirstBlock   = declare&lt;Phase&gt;
+<span class="kw">let</span> processLastBlock    = declare&lt;Phase&gt;
+<span class="kw">let</span> processMiddleBlocks = declare&lt;Phase&gt;
+<span class="kw">let</span> removeEmptyBlocks   = declare&lt;Phase&gt;
+<span class="kw">let</span> mergeBlocks         = declare&lt;Phase&gt;
+
+<span class="kw">let</span> processPhases l       = (List<span class="kw">.</span>toArray
+                             &gt;&gt; !removeEmptyBlocks
+                             &gt;&gt; !mergeBlocks
+                             &gt;&gt; !processFirstBlock
+                             &gt;&gt; !processLastBlock
+                             &gt;&gt; !processMiddleBlocks
+                             ) l
+
+<span class="kw">let</span> codeStart ()        = <span class="st">&quot;</span><span class="ch">\n\n</span><span class="st">```&quot;</span> + !language + <span class="st">&quot;</span><span class="ch">\n</span><span class="st">&quot;</span>
+<span class="kw">let</span> codeEnd   ()        =  <span class="st">&quot;</span><span class="ch">\n\n</span><span class="st">```</span><span class="ch">\n\n</span><span class="st">&quot;</span>
+
+<span class="kw">let</span> firstCodeStart  ()  = <span class="st">&quot;```&quot;</span> + !language + <span class="st">&quot;</span><span class="ch">\n</span><span class="st">&quot;</span>
+<span class="kw">let</span> lastCodeEnd     ()  = <span class="st">&quot;</span><span class="ch">\n\n</span><span class="st">```&quot;</span></code></pre>
+<p>We also want to manage how many newlines there are between different blocks, so we’ll trim all newlines from the start and end of a block, and then add our own.</p>
+<pre class="sourceCode fsharp"><code class="sourceCode fsharp"><span class="kw">let</span> newLines = [|<span class="ch">'\r'</span>;'\n'|]
+
+<span class="kw">type</span> System<span class="kw">.</span>String <span class="kw">with</span>
+    <span class="kw">member</span> s.TrimNl () = s.Trim(newLines) </code></pre>
+<h2 id="remove-the-empty-blocks"><a href="#TOC"><span class="header-section-number">2.4</span> Remove the empty blocks</a></h2>
+<p>There might be empty blocks in the file. For the sake of formatting them correctly, we want to remove them.</p>
+<pre class="sourceCode fsharp"><code class="sourceCode fsharp"><span class="kw">let</span> extract = <span class="kw">function</span>
+    | Code(text)        -&gt; text
+    | Narrative(text)   -&gt; text
+
+removeEmptyBlocks := Array<span class="kw">.</span>filter (<span class="kw">fun</span> b -&gt; (extract b).TrimNl().Trim() &lt;&gt; <span class="st">&quot;&quot;</span>)</code></pre>
+<h2 id="merge-blocks"><a href="#TOC"><span class="header-section-number">2.5</span> Merge blocks</a></h2>
+<p>Consecutive blocks of the same kind need to be merged so as not to introduce empty blocks in the chain. TODO: make tail recursive</p>
+<pre class="sourceCode fsharp"><code class="sourceCode fsharp"><span class="kw">let</span> <span class="kw">rec</span> mergeBlockList = <span class="kw">function</span>
+    | []        -&gt; []
+    | [a]       -&gt; [a]
+    | h1::h2::t -&gt; <span class="kw">match</span> h1, h2 <span class="kw">with</span>
+                   | Code(t1), Code(t2)             -&gt; mergeBlockList (Code(t1 + <span class="st">&quot;</span><span class="ch">\n</span><span class="st">&quot;</span> + t2)::t)
+                   | Narrative(n1), Narrative(n2)   -&gt; mergeBlockList(Narrative(n1 + <span class="st">&quot;</span><span class="ch">\n</span><span class="st">&quot;</span> + n2)::t)
+                   | _, _                           -&gt; h1::mergeBlockList(h2::t)
+
+mergeBlocks :=
+    Array<span class="kw">.</span>toList
+    &gt;&gt; mergeBlockList
+    &gt;&gt; List<span class="kw">.</span>toArray</code></pre>
+<h2 id="managing-the-first-block"><a href="#TOC"><span class="header-section-number">2.6</span> Managing the first block</a></h2>
+<p>You are encouraged to use a comment block as your first block where you specify title, author and date like:</p>
+<p>% title<br>% author(s) (separated by semicolons)<br>% date</p>
+<p>For the first block</p>
+<ol type="a">
+<li>If it is a code block, insert ``LANGat the top</li>
+<li>If it is a comment block put ``LANGat the end</li>
+</ol>
+<pre class="sourceCode fsharp"><code class="sourceCode fsharp">processFirstBlock := <span class="kw">fun</span> blocks -&gt;
+    <span class="kw">if</span> blocks.Length = 0
+        <span class="kw">then</span> blocks
+        <span class="kw">else</span>
+            <span class="kw">let</span> newBlock =
+                <span class="kw">match</span> blocks.[0] <span class="kw">with</span>
+                | Code(text)        -&gt; Code(firstCodeStart() + text.TrimNl())
+                | Narrative(text)   -&gt; Narrative(text.TrimNl() + codeStart ())
+            blocks.[0] &lt;- newBlock
+            blocks</code></pre>
+<h2 id="managing-the-last-block"><a href="#TOC"><span class="header-section-number">2.7</span> Managing the last block</a></h2>
+<p>For the last block b. If it is a code block, insert <code>\n\n at the bottom     a. If it is a comment block, at the start \n\n</code></p>
+<pre class="sourceCode fsharp"><code class="sourceCode fsharp">processLastBlock := <span class="kw">fun</span> blocks -&gt;
+    <span class="kw">if</span> blocks.Length = 0
+        <span class="kw">then</span> blocks
+        <span class="kw">else</span>
+            <span class="kw">let</span> lastIndex = blocks.Length - 1
+            <span class="kw">let</span> newBlock =
+                <span class="kw">match</span> blocks.[lastIndex] <span class="kw">with</span>
+                | Code(text)        -&gt; Code(text.TrimNl () + codeEnd ())
+                | Narrative(text)   -&gt; Narrative(codeEnd () + text.TrimNl())
+            blocks.[lastIndex] &lt;- newBlock
+            blocks</code></pre>
+<h2 id="managing-the-intermediate-blocks"><a href="#TOC"><span class="header-section-number">2.8</span> Managing the intermediate blocks</a></h2>
+<p>For each intermediate block a. If it is a code block, do nothing b. If it is a comment block i. At the start, <code>\n\n         ii. At the end \n\n</code>LANG</p>
+<pre class="sourceCode fsharp"><code class="sourceCode fsharp">processMiddleBlocks := <span class="kw">fun</span> blocks -&gt;
+    <span class="kw">let</span> lastIndex = blocks.Length - 1
+    <span class="kw">let</span> fix = <span class="kw">function</span>
+        | Code(text)        -&gt; Code(text.TrimNl ())
+        | Narrative(text)  -&gt; Narrative(codeEnd () + text.TrimNl () + codeStart ())
+    blocks |&gt; Array<span class="kw">.</span>mapi (<span class="kw">fun</span> i b -&gt; <span class="kw">if</span> i &lt;&gt; 0 &amp;&amp; i &lt;&gt; lastIndex <span class="kw">then</span> fix b <span class="kw">else</span> b)</code></pre>
+<h2 id="putting-everything-back-together"><a href="#TOC"><span class="header-section-number">2.9</span> Putting everything back together</a></h2>
+<p>Once we have the array of blocks we need to flatten them, which is trivial and finally implement our overall translate function.</p>
+<pre class="sourceCode fsharp"><code class="sourceCode fsharp"><span class="kw">let</span> sumBlock s b2 = s + extract b2
+
+<span class="kw">let</span> flattenB blocks = blocks |&gt; Array<span class="kw">.</span>fold sumBlock <span class="st">&quot;&quot;</span>
+
+translate := !blockize &gt;&gt; processPhases &gt;&gt; flattenB</code></pre>
+<h2 id="parsing-command-line-arguments"><a href="#TOC"><span class="header-section-number">2.10</span> Parsing command line arguments</a></h2>
+<p>Here is a generic command line parser taken from <a href="http://fssnip.net/8g">here</a>.</p>
+<pre class="sourceCode fsharp"><code class="sourceCode fsharp"><span class="ot">open</span>  System<span class="kw">.</span>Text<span class="kw">.</span>RegularExpressions
+
+//<span class="co"> parse command using regex</span>
+//<span class="co"> if matched, return (command name, command value) as a tuple</span>
+<span class="kw">let</span> (|Command|_|) (s:string) =
+  <span class="kw">let</span> r = <span class="kw">new</span> Regex(@<span class="st">&quot;^(?:-{1,2}|\/)(?&lt;command&gt;\w+)[=:]*(?&lt;value&gt;.*)$&quot;</span>,RegexOptions<span class="kw">.</span>IgnoreCase)
+  <span class="kw">let</span> m = r.Match(s)
+  <span class="kw">if</span> m.Success
+  <span class="kw">then</span> 
+    Some(m.Groups<span class="kw">.</span>[<span class="st">&quot;command&quot;</span>].Value<span class="kw">.</span>ToLower(), m.Groups<span class="kw">.</span>[<span class="st">&quot;value&quot;</span>].Value)
+  <span class="kw">else</span>
+    None
+
+//<span class="co"> take a sequence of argument values</span>
+//<span class="co"> map them into a (name,value) tuple</span>
+//<span class="co"> scan the tuple sequence and put command name into all subsequent tuples without name</span>
+//<span class="co"> discard the initial (&quot;&quot;,&quot;&quot;) tuple</span>
+//<span class="co"> group tuples by name </span>
+//<span class="co"> convert the tuple sequence into a map of (name,value seq)</span>
+<span class="kw">let</span> parseArgs (args:string <span class="dt">seq</span>) =
+  args 
+  |&gt; Seq<span class="kw">.</span>map (<span class="kw">fun</span> i -&gt; 
+                    <span class="kw">match</span> i <span class="kw">with</span>
+                    | Command (n,v) -&gt; (n,v) //<span class="co"> command</span>
+                    | _ -&gt; (<span class="st">&quot;&quot;</span>,i)            //<span class="co"> data</span>
+                  )
+  |&gt; Seq<span class="kw">.</span>scan (<span class="kw">fun</span> (sn,_) (n,v) -&gt; <span class="kw">if</span> n.Length&gt;0 <span class="kw">then</span> (n,v) <span class="kw">else</span> (sn,v)) (<span class="st">&quot;&quot;</span>,<span class="st">&quot;&quot;</span>)
+  |&gt; Seq<span class="kw">.</span>skip 1
+  |&gt; Seq<span class="kw">.</span>groupBy (<span class="kw">fun</span> (n,_) -&gt; n)
+  |&gt; Seq<span class="kw">.</span>map (<span class="kw">fun</span> (n,s) -&gt; (n, s |&gt; Seq<span class="kw">.</span>map (<span class="kw">fun</span> (_,v) -&gt; v) |&gt; Seq<span class="kw">.</span>filter (<span class="kw">fun</span> i -&gt; i.Length&gt;0)))
+  |&gt; Map<span class="kw">.</span>ofSeq
+
+//<span class="co"> return Some(value) if key is found, None otherwise</span>
+<span class="kw">let</span> (?) (m:Map&lt;string,_&gt;) (p:string) = 
+  <span class="kw">if</span> Map<span class="kw">.</span>containsKey p m
+  <span class="kw">then</span> Some(m.[p])
+  <span class="kw">else</span> None</code></pre>
+<h2 id="main-method"><a href="#TOC"><span class="header-section-number">2.11</span> Main method</a></h2>
+<p>We can now tie everything together.</p>
+<pre class="sourceCode fsharp"><code class="sourceCode fsharp"><span class="kw">let</span> banner  = <span class="st">&quot;LLiteFs : language friendly literate programming</span><span class="ch">\n</span><span class="st">&quot;</span>
+<span class="kw">let</span> usage   = <span class="st">&quot;Usage: llitefs language inputFile outputFile&quot;</span> +
+              <span class="st">&quot;where 'language' is one of fsharp, csharp, c, cplus, java&quot;</span> +
+              <span class="st">&quot;and 'outputfile' defaults to inputfile.mkd&quot;</span>
+<span class="kw">let</span> success = <span class="st">&quot;Success!!&quot;</span>
+<span class="kw">let</span> failure = <span class="st">&quot;Failure!!&quot;</span>
+
+[&lt;EntryPoint&gt;]
+<span class="kw">let</span> main args =
+    <span class="kw">try</span>
+        printfn <span class="st">&quot;%s&quot;</span> banner
+
+        <span class="kw">let</span> pArgs       = args |&gt; parseArgs
+        <span class="kw">let</span> ars         = pArgs.[<span class="st">&quot;&quot;</span>] |&gt; Seq<span class="kw">.</span>toArray
+
+        language        := ars.[0]
+        <span class="kw">let</span> inputFile   = ars.[1]
+        <span class="kw">let</span> outputFile  = <span class="kw">if</span> ars.Length &lt; 3 <span class="kw">then</span> inputFile + <span class="st">&quot;.mkd&quot;</span> <span class="kw">else</span> ars.[2]
+
+        <span class="kw">let</span> input       = System<span class="kw">.</span>IO<span class="kw">.</span>File<span class="kw">.</span>ReadAllText inputFile
+        <span class="kw">let</span> output      = !translate input
+        System<span class="kw">.</span>IO<span class="kw">.</span>File<span class="kw">.</span>WriteAllText (outputFile, output)
+        printfn <span class="st">&quot;%s&quot;</span> success
+        0
+    <span class="kw">with</span>
+    | e -&gt;
+        printfn <span class="st">&quot;%s&quot;</span> failure 
+        printfn <span class="st">&quot;%s&quot;</span> usage
+        printfn <span class="st">&quot;%A&quot;</span> e
+        <span class="dv">-1</span></code></pre>
+</body>
+</html>

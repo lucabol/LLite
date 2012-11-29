@@ -1,5 +1,5 @@
 ﻿(**
-% LLiteFs : language friendly literate programming
+% LLiteFs : a language friendly literate programming tool
 % Luca Bolognese
 % 22/11/2012
 **)
@@ -13,14 +13,12 @@ comes from some realizations on my part:
 
 * When I go back to code that I have written some time ago, I don't remember my reasoning
 * When I write a blog post, my code seems to be better. Perhaps explaining things to people encourages
-  me to be more precise
-* I like to think top down, but the compiler forces me to write code bottom up, starting from details and
-  going to higher level concepts
+   me to be more precise
 
 Unhappiness with existing tools
 -------------------------------
 
-Many of the existing literate programming tools work similarly to the original [CWeb](http://www-cs-faculty.stanford.edu/~uno/cweb.html).
+Many of the existing tools work similarly to [CWeb] (http://www-cs-faculty.stanford.edu/~uno/cweb.html).
 
 * They have a tangle program that goes over your file and extract something that the compiler can understand
 * They have a weave program that extracts from your file something that the document generator can understand
@@ -40,19 +38,17 @@ But simply doing so it's not enough. The code would become difficult to read
 because of the need to clearly indicate which parts are code-parts. Also there are some other refactorings,
 explained later, that needs to be applied for the sake of producing a pleasurable document.
 
-Hence the weave phase as been retained and what you are reading is the program that go over your code file and extracts
+Hence the weave phase as been retained and this is the program that go over your code file and extracts
 a nicely formatted markdown file that can then be translated to HTML, PDF, latex, etc...
-
-*So the document you are reading is the program itself.*
 
 Multiprogramming, multi-document format
 ---------------------------------------
 
 An attempt has be made to make the program work for any programming language and any documentation format,
-with the former being more of a priority given that tools like [Pandoc](http://johnmacfarlane.net/pandoc/) can translate easily between different
+with the former being more of a priority given tools like Pandoc that can translate easily between different
 markup formats.
 
-Some extensions to the standard markdown format have been used to produce nicer output (i.e. code blocks, titles, ...).
+Some extensions to the standard markdown format has been used to produce nicer output (i.e. code blocks, titles, ...).
 These work in Pandoc and probably many other markdown processor. It seems that the community is standardizing
 on a useful superset of markdown.
 
@@ -70,10 +66,10 @@ Language limitations
 One of the main tenets of literate programming is that the code should be written in the order that facilitates
 exposition to a human reader, not in the order that makes the compiler happy. This is very important.
 
-If you have written a blog post or tried to explain a codebase to a new joiner, you must have noticed
+If you have written a code related blog post or tried to explain a codebase to a new joiner, you would agree
 that you don't start from the top of the file and go down, but jump here and there trying to better explain
 the main concepts. Literate programming says that you should write code the same way.
-But in our version of it, the compiler needs to be kept happy because the literate file *is* the code file.
+But in our scheme, the compiler needs to be kept happy because the literate file *is* the code file.
 
 Some ingenuity is required to achieve such goal:
 
@@ -119,7 +115,7 @@ And use it like any normal function.
 
 (**
 The syntax is not too bad. You get that often-sought Haskell like explicit type declaration and you can
-regex the codebase to create an index at the end of the program (not done yet).
+regex the codebase to create an index at the end of the program.
 
 But is it too slow? After all, there is one more indirection call for each function call.
 
@@ -138,17 +134,16 @@ and howManyIer until you convince yourself that it is ok.
     ()
 
 (**
-Unfortunately, there is a big problem with all of the above: it doesn't work with generic functions and curried function invocations.
+There is a problem with all of the above: it doesn't work with generic functions and curried function invocations.
 The code below works in all cases, but it is ugly for the user to use. In this program I've used the beautiful, but incorrect, syntax.
 **)
 
 type Literate() =
-    static member Declare<'a, 'b>  (ref : obj ref) (x : 'a) : 'b =
-        unbox <| (unbox<obj -> obj> !ref) x
-    static member Define<'a, 'b> (func : 'a -> 'b) (ref : obj ref) (f : 'a -> 'b) =
-        ref := box (unbox<'a> >> f >> box)
+    static member Declare<'a, 'b>  (ref : obj ref) (x : 'a) : 'b = unbox <| (unbox<obj -> obj> !ref) x
+    static member Define<'a, 'b> (func : 'a -> 'b) (ref : obj ref) (f : 'a -> 'b) = ref := box (unbox<'a> >> f >> box)
 
-////////////////////////////////////
+
+(******************)
     
 let rec id (x : 'a) : 'a = Literate.Declare idImpl x
 and idImpl = ref null
@@ -162,14 +157,9 @@ let r = f()
 (**
 Implementation
 ==============
-
-This is just a quick prototype done for the sake of experimenting with the concepts. It's not production quality.
-
 At the core, this program is a simple translator that takes some code text and return a valid markdown text.
-There is a global concept of options that need to be accessible from everywhere in the program and a general
+There is a global concept of options that needs to be accessible from everywhere in the program and a general
 concept of language that represent the language we are trying to parse.
-
-At this point, we don't know what the type for options is, so we'll use obj.
 **)
 
 let language    = declare<string>
@@ -180,10 +170,16 @@ let translate   = declare<string -> string>
 Translation passes
 ------------------
 
-The various translation phases are described below. I define narrative blocks (N) as the ones comprises inside the special start comment tags and end comment tag
+This is a summary of the translation passes currently implemented, we'll review each one when writing the code.
+
+1. Check if the first block of comment is a title block, parse it
+2. Follow all the links to assemble all the files in one document
+3. [Manage comment annotations] (manage-comment-annotations)
+
+I define narrative blocks (N) as the ones comprises inside the special start comment tags and end comment tag
 (excluding such tags). Code blocks (C) are all the rest.
 
-We need a function that takes a string and returns a list with the various blocks, so that we can then play with them.
+We need a function that takes a string and returns a list with the various blocks.
 **)
 
 type Block =
@@ -196,18 +192,14 @@ let blockize = declare<string -> Block list>
 Program Parser
 --------------
 
-I could have used regular expressions to parse the program, but it seemed ugly. I could also have used FsParsec,
-but that brings with it an additional dll. So I decided to roll my own parser. This has several problems:
+I could have used regular expressions to parse the program, but it seemed ugly. I could have used FsParsec,
+but that brings with it an additional dll. So I decided to roll my own parser. This has two problems:
 
-* It doesn't report errors nicely
-* It is probably very slow
 * It doesn't allow narrative comments inside comments, in particular it doesn't allow the opening comment
 * It doesn't allow opening comments in the program code (not even inside a string)
 
 The latter in particular is troublesome. You'll need to use a trick in the code (i.e. concatenating strings)
-to foul this program in not seeing an opening comment, but it is inconvenient.
-
-With all of that, it works for the sake of trying out this style of programming.
+to full this program in not seeing an opening comment.
 **)
 
 (**
@@ -218,17 +210,15 @@ syntax each language uses to represent the opening and closing of a narrative co
 type Comments = {Opening : string; Closing : string }
 
 options := [
-            "fsharp_comments", {Opening = "(*" + "*"; Closing = "*" + "*)"} :> obj
+            "fsharp_comments", {Opening = "(**"; Closing = "**)"} :> obj
             "c_comments"     , {Opening = "/**"; Closing = "**/"} :> obj
             "cpp_comments" , {Opening = "/**"; Closing = "**/"} :> obj
             "csharp_comments", {Opening = "/**"; Closing = "**/"} :> obj
             "java_comments"  , {Opening = "/**"; Closing = "**/"} :> obj
            ] |> Map.ofList
 
-let getOpening () = ((!options |> Map.find (!language + "_comments")) :?> Comments).Opening
-                    |> List.ofSeq
-let getClosing () = ((!options |> Map.find (!language + "_comments")) :?> Comments).Closing
-                    |> List.ofSeq
+let getOpening () = ((!options |> Map.find (!language + "_comments")) :?> Comments).Opening |> List.ofSeq
+let getClosing () = ((!options |> Map.find (!language + "_comments")) :?> Comments).Closing |> List.ofSeq
 
 (**
 TODO: review these algorithms for performance when large files are parsed
@@ -294,8 +284,7 @@ type Chunk =
 let parse source =
 
     let rec parseNarrative acc = function
-        | OpenComment::t        ->
-            failwith "Don't open narrative comments inside narrative comments"
+        | OpenComment::t        -> failwith "You cannot have open narrative comments inside narrative comments"
         | CloseComment::t       -> acc, t
         | Text(s)::t            -> parseNarrative (Text(s)::acc) t
         | []                    -> failwith "You haven't closed your last narrative comment"
@@ -312,8 +301,7 @@ let parse source =
         | Text(s)::t        ->
             let code, t' = parseCode [Text(s)] t
             parse' (CodeChunk(code)::acc) t'
-        | CloseComment::t   ->
-            failwith "Don't insert a close narrative comment at the start of your program"
+        | CloseComment::t   -> failwith "You inserted a close narrative comment at the start of your program"
         | []                -> List.rev acc
 
     parse' [] (List.ofSeq source)
@@ -332,14 +320,12 @@ let flatten chunks =
 
     let tokenToStringCode = function
     | OpenComment                   -> failwith "Open narrative comment cannot be in code"
-    | CloseComment                  -> string(getClosing () |> List.toArray)
+    | CloseComment                  -> "**)"
     | Text(s)                       -> s
 
     let flattenChunk = function
-    | NarrativeChunk(tokens)             ->
-        Narrative(tokens |> List.fold (fun state token -> state + tokenToStringNarrative token) "")
-    | CodeChunk(tokens)                  ->
-        Code(tokens |> List.fold (fun state token -> state + tokenToStringCode token) "")
+    | NarrativeChunk(tokens)             -> Narrative(tokens |> List.fold (fun state token -> state + tokenToStringNarrative token) "")
+    | CodeChunk(tokens)                  -> Code(tokens |> List.fold (fun state token -> state + tokenToStringCode token) "")
 
     chunks |> List.fold (fun state chunk -> flattenChunk chunk :: state) [] |> List.rev
 
@@ -347,13 +333,13 @@ let flatten chunks =
 We are getting there, now we have a list of blocks we can operate upon
 **)
 
-blockize := (tokenize >> parse >> flatten)    
+blockize := (tokenize >> parse >> flatten)        
  
 (**
 Narrative comments phases
 -------------------------
 
-We need to process all the blocks by adding all the code tags in the right places and removing all empty blocks.
+We translate the list of blocks to an array to allow mutable changes without regenerating the data structure
 **)
 
 type Phase = Block array -> Block array
@@ -361,21 +347,13 @@ type Phase = Block array -> Block array
 let processFirstBlock   = declare<Phase>
 let processLastBlock    = declare<Phase>
 let processMiddleBlocks = declare<Phase>
-let removeEmptyBlocks   = declare<Phase>
-let mergeBlocks         = declare<Phase>
 
-let processPhases l       = (List.toArray
-                             >> !removeEmptyBlocks
-                             >> !mergeBlocks
-                             >> !processFirstBlock
-                             >> !processLastBlock
-                             >> !processMiddleBlocks
-                             ) l
+let processPhases l       = (List.toArray >> !processFirstBlock >> !processLastBlock >> !processMiddleBlocks) l
 
-let codeStart ()        = "\n\n```" + !language + "\n"
+let codeStart ()        = "\n\n```" + !language + "\n\n"
 let codeEnd   ()        =  "\n\n```\n\n"
 
-let firstCodeStart  ()  = "```" + !language + "\n"
+let firstCodeStart  ()  = "```" + !language + "\n\n"
 let lastCodeEnd     ()  = "\n\n```"
 
 (**
@@ -383,44 +361,8 @@ We also want to manage how many newlines there are between different blocks, so 
 from the start and end of a block, and then add our own.
 **)
 
-let newLines = [|'\r';'\n'|]
-
 type System.String with
-    member s.TrimNl () = s.Trim(newLines) 
-
-(**
-Remove the empty blocks
------------------------
-
-There might be empty blocks in the file. For the sake of formatting them correctly, we want to remove them.
-**)
-
-let extract = function
-    | Code(text)        -> text
-    | Narrative(text)   -> text
-
-removeEmptyBlocks := Array.filter (fun b -> (extract b).TrimNl().Trim() <> "")
-
-(**
-Merge blocks
-------------
-
-Consecutive blocks of the same kind need to be merged so as not to introduce empty blocks in the chain.
-TODO: make tail recursive 
-**)
-
-let rec mergeBlockList = function
-    | []        -> []
-    | [a]       -> [a]
-    | h1::h2::t -> match h1, h2 with
-                   | Code(t1), Code(t2)             -> mergeBlockList (Code(t1 + "\n" + t2)::t)
-                   | Narrative(n1), Narrative(n2)   -> mergeBlockList(Narrative(n1 + "\n" + n2)::t)
-                   | _, _                           -> h1::mergeBlockList(h2::t)
-
-mergeBlocks :=
-    Array.toList
-    >> mergeBlockList
-    >> List.toArray
+    member s.TrimNl () = s.Trim([|'\r';'\n'|]) 
 
 (**
 Managing the first block
@@ -428,14 +370,13 @@ Managing the first block
 
 You are encouraged to use a comment block as your first block where you specify title, author and date like:  
 
-% title  
-% author(s) (separated by semicolons)  
+% title
+% author(s) (separated by semicolons)
 % date
 
 For the first block
-
-a. If it is a code block, insert ``LANG\n\n at the top
-b. If it is a comment block put \n\n``LANG\n\n at the end
+    a. If it is a code block, insert ```LANG\n\n at the top
+    b. If it is a comment block put \n\n```LANG\n\n at the end
   
 **)
 
@@ -455,8 +396,8 @@ Managing the last block
 -----------------------
 
 For the last block
-    b. If it is a code block, insert \n\n``\n\n at the bottom
-    a. If it is a comment block, at the start \n\n``\n\n
+    b. If it is a code block, insert \n\n```\n\n at the bottom
+    a. If it is a comment block, at the start \n\n```\n\n
 
 **)
 processLastBlock := fun blocks ->
@@ -466,8 +407,8 @@ processLastBlock := fun blocks ->
             let lastIndex = blocks.Length - 1
             let newBlock =
                 match blocks.[lastIndex] with
-                | Code(text)        -> Code(text.TrimNl () + codeEnd ())
-                | Narrative(text)   -> Narrative(codeEnd () + text.TrimNl())
+                | Code(text)        -> Code(text.TrimNl () + lastCodeEnd ())
+                | Narrative(text)   -> Narrative(text.TrimNl())
             blocks.[lastIndex] <- newBlock
             blocks
 
@@ -478,17 +419,16 @@ Managing the intermediate blocks
 For each intermediate block
     a. If it is a code block, do nothing
     b. If it is a comment block
-        i. At the start, \n\n``\n\n
-        ii. At the end \n\n``LANG\n\n
+        i. At the start, \n\n```\n\n
+        ii. At the end \n\n```LANG\n\n
 **)
 
 processMiddleBlocks := fun blocks ->
     let lastIndex = blocks.Length - 1
     let fix = function
         | Code(text)        -> Code(text.TrimNl ())
-        | Narrative(text)  -> Narrative(codeEnd () + text.TrimNl () + codeStart ())
+        | Narrative(text)  -> Narrative(codeStart () + text.TrimNl () + codeEnd ())
     blocks |> Array.mapi (fun i b -> if i <> 0 && i <> lastIndex then fix b else b)
-
 
 (**
 Putting everything back together
@@ -498,7 +438,12 @@ Once we have the array of blocks we need to flatten them, which is trivial and f
 overall translate function.
 **)
 
-let sumBlock s b2 = s + extract b2
+let sumBlock s b2 =
+    let extract = function
+        | Code(text)        -> text
+        | Narrative(text)   -> text
+
+    s + extract b2
 
 let flattenB blocks = blocks |> Array.fold sumBlock ""
 
@@ -508,7 +453,7 @@ translate := !blockize >> processPhases >> flattenB
 Parsing command line arguments
 ------------------------------
 
-Here is a generic command line parser taken from [here](http://fssnip.net/8g).
+Here is a generic command line parser taken from [here] (http://fssnip.net/8g).
 **)
 
 open  System.Text.RegularExpressions
@@ -556,12 +501,10 @@ Main method
 We can now tie everything together.
 **)
 
-let banner  = "LLiteFs : language friendly literate programming\n"
-let usage   = "Usage: llitefs language inputFile outputFile" +
+let banner  = "LLiteFs: LLiteFs : a language friendly literate programming tool\n"
+let usage   = "llitefs language inputFile outputFile" +
               "where 'language' is one of fsharp, csharp, c, cplus, java" +
               "and 'outputfile' defaults to inputfile.mkd"
-let success = "Success!!"
-let failure = "Failure!!"
 
 [<EntryPoint>]
 let main args =
@@ -578,11 +521,9 @@ let main args =
         let input       = System.IO.File.ReadAllText inputFile
         let output      = !translate input
         System.IO.File.WriteAllText (outputFile, output)
-        printfn "%s" success
         0
     with
     | e ->
-        printfn "%s" failure 
         printfn "%s" usage
         printfn "%A" e
         -1

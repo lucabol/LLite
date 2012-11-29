@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 2012
-Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "LiterateProgramming", "LiterateProgramming.fsproj", "{0849631D-32F6-45B3-AD65-58C4C8086B88}"
+Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "LLite", "LLite.fsproj", "{0849631D-32F6-45B3-AD65-58C4C8086B88}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

@@ -1,10 +1,8 @@
-﻿(**
 % LLiteFs : language friendly literate programming
 % Luca Bolognese
 % 22/11/2012
-**)
 
-(**
+
 Main ideas
 ==========
 
@@ -61,9 +59,8 @@ other content, for example:
 
 * in F#, it is (* * .. * *) without the space in the middle
 * in C, C++ /** .. *//
-**)
 
-(**
+
 Language limitations
 --------------------
 
@@ -85,39 +82,43 @@ An aside: forward declaring functions in F#
 -------------------------------------------
 
 You can achieve something somehow similar to forward declaration by this dirty trick.
-**)
 
+```fsharp
 module LLiteFs
 
 let declare<'a>  = ref Unchecked.defaultof<'a>
 
-(**
-Whenever you want to do a forward declaration of a function , or variable, you can type:
-**)
+```
 
+Whenever you want to do a forward declaration of a function , or variable, you can type:
+
+```fsharp
 let testDeclare() =
 
     let add = declare<float -> float>
 
     let ``function I want to explain that depends on add`` nums = nums |> Seq.map !add
 
-(**
+```
+
 This creates a ref to a function from float to float. It looks a bit like an Haskell type declaration.
 You can then use such function as if it were actually define and delay his definition to a later point
 in time when you are ready to explain it.
 
 When you are ready, you can then do:
-**)
 
+```fsharp
     add := fun x -> x + 1.
 
-(**
-And use it like any normal function.
-**)
+```
 
+And use it like any normal function.
+
+```fsharp
     printfn "%f" (!add 3.)
 
-(**
+```
+
 The syntax is not too bad. You get that often-sought Haskell like explicit type declaration and you can
 regex the codebase to create an index at the end of the program (not done yet).
 
@@ -125,8 +126,8 @@ But is it too slow? After all, there is one more indirection call for each funct
 
 Let's test it: enable #time in F# interactive and execute timeNormalF and timeIndirectF varying sleepTime
 and howManyIer until you convince yourself that it is ok.
-**)
 
+```fsharp
     let sleepTime   = 50
     let howManyIter = 100
     let normalF x   = System.Threading.Thread.Sleep sleepTime
@@ -137,11 +138,12 @@ and howManyIer until you convince yourself that it is ok.
     let timeIndirectF   = [1..howManyIter] |> List.iter !indirectF
     ()
 
-(**
+```
+
 Unfortunately, there is a big problem with all of the above: it doesn't work with generic functions and curried function invocations.
 The code below works in all cases, but it is ugly for the user to use. In this program I've used the beautiful, but incorrect, syntax.
-**)
 
+```fsharp
 type Literate() =
     static member Declare<'a, 'b>  (ref : obj ref) (x : 'a) : 'b =
         unbox <| (unbox<obj -> obj> !ref) x
@@ -159,7 +161,8 @@ Literate.Define id idImpl (fun x -> x)
 
 let r = f()
 
-(**
+```
+
 Implementation
 ==============
 
@@ -170,13 +173,14 @@ There is a global concept of options that need to be accessible from everywhere 
 concept of language that represent the language we are trying to parse.
 
 At this point, we don't know what the type for options is, so we'll use obj.
-**)
 
+```fsharp
 let language    = declare<string>
 let options     = declare<Map<string, obj>>
 let translate   = declare<string -> string>
 
-(**
+```
+
 Translation passes
 ------------------
 
@@ -184,15 +188,16 @@ The various translation phases are described below. I define narrative blocks (N
 (excluding such tags). Code blocks (C) are all the rest.
 
 We need a function that takes a string and returns a list with the various blocks, so that we can then play with them.
-**)
 
+```fsharp
 type Block =
 | Code      of string
 | Narrative of string
 
 let blockize = declare<string -> Block list>
 
-(**
+```
+
 Program Parser
 --------------
 
@@ -208,13 +213,12 @@ The latter in particular is troublesome. You'll need to use a trick in the code 
 to foul this program in not seeing an opening comment, but it is inconvenient.
 
 With all of that, it works for the sake of trying out this style of programming.
-**)
 
-(**
+
 First we need to define options that help us in parsing different languages. We need to know which special
 syntax each language uses to represent the opening and closing of a narrative comment.
-**)
 
+```fsharp
 type Comments = {Opening : string; Closing : string }
 
 options := [
@@ -230,10 +234,11 @@ let getOpening () = ((!options |> Map.find (!language + "_comments")) :?> Commen
 let getClosing () = ((!options |> Map.find (!language + "_comments")) :?> Comments).Closing
                     |> List.ofSeq
 
-(**
-TODO: review these algorithms for performance when large files are parsed
-**)
+```
 
+TODO: review these algorithms for performance when large files are parsed
+
+```fsharp
 let startsList commentTag l =
     let c   = System.String(List.toArray commentTag)
     let t   = System.String (List.toArray l)
@@ -259,12 +264,14 @@ let remainingClose l =
         then []
         else l |> List.ofSeq |> Seq.skip o.Length |> Seq.toList  
     
-(**
+
+```
+
 This is a pretty standard lexer / parser combination. Unfortunately it doesn't manage errors in a graceful
 way.
 TODO: consider moving to FSParsec or add error management
-**)
 
+```fsharp
 type Token =
 | OpenComment
 | CloseComment
@@ -318,12 +325,13 @@ let parse source =
 
     parse' [] (List.ofSeq source)
 
+```
 
-(**
 The flattening part of the algorithm is a bit unusual. At this point we have a parse tree, but we want
 to reduce it to two simple node types containing all the text.
 TODO: consider managing nested comments and comments in strings (the latter has to happen in earlier phases) 
-**)
+
+```fsharp
  
 let flatten chunks =
     let tokenToStringNarrative = function
@@ -343,19 +351,22 @@ let flatten chunks =
 
     chunks |> List.fold (fun state chunk -> flattenChunk chunk :: state) [] |> List.rev
 
-(**
-We are getting there, now we have a list of blocks we can operate upon
-**)
+```
 
+We are getting there, now we have a list of blocks we can operate upon
+
+```fsharp
 blockize := (tokenize >> parse >> flatten)    
  
-(**
+
+```
+
 Narrative comments phases
 -------------------------
 
 We need to process all the blocks by adding all the code tags in the right places and removing all empty blocks.
-**)
 
+```fsharp
 type Phase = Block array -> Block array
 
 let processFirstBlock   = declare<Phase>
@@ -378,37 +389,40 @@ let codeEnd   ()        =  "\n\n```\n\n"
 let firstCodeStart  ()  = "```" + !language + "\n"
 let lastCodeEnd     ()  = "\n\n```"
 
-(**
+```
+
 We also want to manage how many newlines there are between different blocks, so we'll trim all newlines
 from the start and end of a block, and then add our own.
-**)
 
+```fsharp
 let newLines = [|'\r';'\n'|]
 
 type System.String with
     member s.TrimNl () = s.Trim(newLines) 
 
-(**
+```
+
 Remove the empty blocks
 -----------------------
 
 There might be empty blocks in the file. For the sake of formatting them correctly, we want to remove them.
-**)
 
+```fsharp
 let extract = function
     | Code(text)        -> text
     | Narrative(text)   -> text
 
 removeEmptyBlocks := Array.filter (fun b -> (extract b).TrimNl().Trim() <> "")
 
-(**
+```
+
 Merge blocks
 ------------
 
 Consecutive blocks of the same kind need to be merged so as not to introduce empty blocks in the chain.
 TODO: make tail recursive 
-**)
 
+```fsharp
 let rec mergeBlockList = function
     | []        -> []
     | [a]       -> [a]
@@ -422,7 +436,8 @@ mergeBlocks :=
     >> mergeBlockList
     >> List.toArray
 
-(**
+```
+
 Managing the first block
 ------------------------
 
@@ -437,8 +452,8 @@ For the first block
 a. If it is a code block, insert ``LANG\n\n at the top
 b. If it is a comment block put \n\n``LANG\n\n at the end
   
-**)
 
+```fsharp
 processFirstBlock := fun blocks ->
     if blocks.Length = 0
         then blocks
@@ -450,7 +465,8 @@ processFirstBlock := fun blocks ->
             blocks.[0] <- newBlock
             blocks
 
-(**
+```
+
 Managing the last block
 -----------------------
 
@@ -458,7 +474,7 @@ For the last block
     b. If it is a code block, insert \n\n``\n\n at the bottom
     a. If it is a comment block, at the start \n\n``\n\n
 
-**)
+```fsharp
 processLastBlock := fun blocks ->
     if blocks.Length = 0
         then blocks
@@ -471,7 +487,8 @@ processLastBlock := fun blocks ->
             blocks.[lastIndex] <- newBlock
             blocks
 
-(**
+```
+
 Managing the intermediate blocks
 --------------------------------
 
@@ -480,8 +497,8 @@ For each intermediate block
     b. If it is a comment block
         i. At the start, \n\n``\n\n
         ii. At the end \n\n``LANG\n\n
-**)
 
+```fsharp
 processMiddleBlocks := fun blocks ->
     let lastIndex = blocks.Length - 1
     let fix = function
@@ -489,28 +506,29 @@ processMiddleBlocks := fun blocks ->
         | Narrative(text)  -> Narrative(codeEnd () + text.TrimNl () + codeStart ())
     blocks |> Array.mapi (fun i b -> if i <> 0 && i <> lastIndex then fix b else b)
 
+```
 
-(**
 Putting everything back together
 --------------------------------
 
 Once we have the array of blocks we need to flatten them, which is trivial and finally implement our
 overall translate function.
-**)
 
+```fsharp
 let sumBlock s b2 = s + extract b2
 
 let flattenB blocks = blocks |> Array.fold sumBlock ""
 
 translate := !blockize >> processPhases >> flattenB
 
-(**
+```
+
 Parsing command line arguments
 ------------------------------
 
 Here is a generic command line parser taken from [here](http://fssnip.net/8g).
-**)
 
+```fsharp
 open  System.Text.RegularExpressions
 
 // parse command using regex
@@ -549,13 +567,14 @@ let (?) (m:Map<string,_>) (p:string) =
   then Some(m.[p])
   else None
 
-(**
+```
+
 Main method
 -----------
 
 We can now tie everything together.
-**)
 
+```fsharp
 let banner  = "LLiteFs : language friendly literate programming\n"
 let usage   = "Usage: llitefs language inputFile outputFile" +
               "where 'language' is one of fsharp, csharp, c, cplus, java" +
@@ -586,3 +605,6 @@ let main args =
         printfn "%s" usage
         printfn "%A" e
         -1
+
+```
+

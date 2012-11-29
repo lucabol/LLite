@@ -1,0 +1,11 @@
+C:\Projects\LLite\bin\Debug\LLite.exe.config
+C:\Projects\LLite\bin\Debug\LiterateProgramming.XML
+C:\Projects\LLite\bin\Debug\LLite.exe
+C:\Projects\LLite\bin\Debug\LLite.pdb
+C:\Projects\LLite\bin\Debug\FSharp.Core.dll
+C:\Projects\LLite\bin\Debug\FSharp.Core.xml
+C:\Projects\LLite\obj\Debug\LLite.exe
+C:\Projects\LLite\obj\Debug\LLite.pdb
+C:\Projects\LLite\bin\Debug\Program.fs
+C:\Projects\LLite\bin\Debug\generateHtml.bat
+C:\Projects\LLite\bin\Debug\generatePDF.bat
