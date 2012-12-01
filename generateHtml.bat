@@ -1,1 +1,2 @@
 pandoc -f markdown program.fs.mkd -t html5 -S -p --self-contained -s --toc -o LLiteFs.html --normalize --highlight-style=pygments --number-sections --email-obfuscation=references --css="..\..\style.css"
+copy program.fs.mkd ..\..\README.md
