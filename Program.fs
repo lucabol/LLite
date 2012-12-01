@@ -363,13 +363,12 @@ let processLastBlock    = declare<Phase>
 let processMiddleBlocks = declare<Phase>
 let removeEmptyBlocks   = declare<Phase>
 let mergeBlocks         = declare<Phase>
+let addCodeTags         = declare<Phase>
 
 let processPhases l       = (List.toArray
                              >> !removeEmptyBlocks
                              >> !mergeBlocks
-                             >> !processFirstBlock
-                             >> !processLastBlock
-                             >> !processMiddleBlocks
+                             >> !addCodeTags
                              ) l
 
 let codeStart ()        = "\n\n```" + !language + "\n"
@@ -423,72 +422,16 @@ mergeBlocks :=
     >> List.toArray
 
 (**
-Managing the first block
-------------------------
+Adding code tags
+----------------
 
-You are encouraged to use a comment block as your first block where you specify title, author and date like:  
-
-% title  
-% author(s) (separated by semicolons)  
-% date
-
-For the first block
-
-a. If it is a code block, insert ``LANG\n\n at the top
-b. If it is a comment block put \n\n``LANG\n\n at the end
-  
+Each code block needs a tag at the start and one at the end to identify it as code.
 **)
 
-processFirstBlock := fun blocks ->
-    if blocks.Length = 0
-        then blocks
-        else
-            let newBlock =
-                match blocks.[0] with
-                | Code(text)        -> Code(firstCodeStart() + text.TrimNl())
-                | Narrative(text)   -> Narrative(text.TrimNl() + codeStart ())
-            blocks.[0] <- newBlock
-            blocks
-
-(**
-Managing the last block
------------------------
-
-For the last block
-    b. If it is a code block, insert \n\n``\n\n at the bottom
-    a. If it is a comment block, at the start \n\n``\n\n
-
-**)
-processLastBlock := fun blocks ->
-    if blocks.Length = 0
-        then blocks
-        else
-            let lastIndex = blocks.Length - 1
-            let newBlock =
-                match blocks.[lastIndex] with
-                | Code(text)        -> Code(text.TrimNl () + codeEnd ())
-                | Narrative(text)   -> Narrative(codeEnd () + text.TrimNl())
-            blocks.[lastIndex] <- newBlock
-            blocks
-
-(**
-Managing the intermediate blocks
---------------------------------
-
-For each intermediate block
-    a. If it is a code block, do nothing
-    b. If it is a comment block
-        i. At the start, \n\n``\n\n
-        ii. At the end \n\n``LANG\n\n
-**)
-
-processMiddleBlocks := fun blocks ->
-    let lastIndex = blocks.Length - 1
-    let fix = function
-        | Code(text)        -> Code(text.TrimNl ())
-        | Narrative(text)  -> Narrative(codeEnd () + text.TrimNl () + codeStart ())
-    blocks |> Array.mapi (fun i b -> if i <> 0 && i <> lastIndex then fix b else b)
-
+addCodeTags := fun blocks ->
+    blocks |> Array.map (function
+                        | Narrative(_) as n -> n
+                        | Code(text)        -> Code(codeStart() + text + codeEnd()))
 
 (**
 Putting everything back together
