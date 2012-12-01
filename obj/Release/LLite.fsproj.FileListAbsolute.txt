@@ -1,9 +1,0 @@
-C:\Projects\LLite\bin\Release\LLite.exe.config
-C:\Projects\LLite\bin\Release\LiterateProgramming.XML
-C:\Projects\LLite\bin\Release\LLite.exe
-C:\Projects\LLite\bin\Release\LLite.pdb
-C:\Projects\LLite\bin\Release\FSharp.Core.dll
-C:\Projects\LLite\bin\Release\FSharp.Core.xml
-C:\Projects\LLite\obj\Release\LLite.exe
-C:\Projects\LLite\obj\Release\LLite.pdb
-C:\Projects\LLite\bin\Release\Program.fs
