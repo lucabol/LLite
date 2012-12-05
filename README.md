@@ -87,7 +87,6 @@ You can achieve something somehow similar to forward declaration by this dirty t
 module LLiteFs
 
 let declare<'a>  = ref Unchecked.defaultof<'a>
-
 ```
 
 Whenever you want to do a forward declaration of a function , or variable, you can type:
@@ -98,7 +97,6 @@ let testDeclare() =
     let add = declare<float -> float>
 
     let ``function I want to explain that depends on add`` nums = nums |> Seq.map !add
-
 ```
 
 This creates a ref to a function from float to float. It looks a bit like an Haskell type declaration.
@@ -109,14 +107,12 @@ When you are ready, you can then do:
 
 ```fsharp
     add := fun x -> x + 1.
-
 ```
 
 And use it like any normal function.
 
 ```fsharp
     printfn "%f" (!add 3.)
-
 ```
 
 The syntax is not too bad. You get that often-sought Haskell like explicit type declaration and you can
@@ -137,7 +133,6 @@ and howManyIer until you convince yourself that it is ok.
     let timeNormalF     = [1..howManyIter] |> List.iter normalF
     let timeIndirectF   = [1..howManyIter] |> List.iter !indirectF
     ()
-
 ```
 
 Unfortunately, there is a big problem with all of the above: it doesn't work with generic functions and curried function invocations.
@@ -160,32 +155,35 @@ let f () = id 100 + id 200
 Literate.Define id idImpl (fun x -> x)
 
 let r = f()
-
 ```
 
 Implementation
 ==============
 
-This is just a quick prototype done for the sake of experimenting with the concepts. It's not production quality.
+At the core, this program is a simple translator that takes some code text and return a valid markdown/whatever text.
+We need to know:
 
-At the core, this program is a simple translator that takes some code text and return a valid markdown text.
-There is a global concept of options that need to be accessible from everywhere in the program and a general
-concept of language that represent the language we are trying to parse.
-
-At this point, we don't know what the type for options is, so we'll use obj.
+* The strings that start and end a narrative comment (input symbols)
+* How to translate a code block into a document. We support these variations:
+    * Indented: indent them by N spaces
+    * Surrounded by startCode/endCode strings
 
 ```fsharp
-let language    = declare<string>
-let options     = declare<Map<string, obj>>
-let translate   = declare<string -> string>
+type CodeSymbols =
+    | Indent of int                 // indentation level in whitespaces
+    | Surrounded of string * string // start code * end code
 
+type Options = {
+    startNarrative  : string
+    endNarrative    : string
+    codeSymbols     : CodeSymbols
+}
+
+let translate   = declare<Options -> string -> string>
 ```
 
 Translation passes
 ------------------
-
-The various translation phases are described below. I define narrative blocks (N) as the ones comprises inside the special start comment tags and end comment tag
-(excluding such tags). Code blocks (C) are all the rest.
 
 We need a function that takes a string and returns a list with the various blocks, so that we can then play with them.
 
@@ -194,8 +192,7 @@ type Block =
 | Code      of string
 | Narrative of string
 
-let blockize = declare<string -> Block list>
-
+let blockize = declare<Options -> string -> Block list>
 ```
 
 Program Parser
@@ -215,60 +212,44 @@ to foul this program in not seeing an opening comment, but it is inconvenient.
 With all of that, it works for the sake of trying out this style of programming.
 
 
-First we need to define options that help us in parsing different languages. We need to know which special
-syntax each language uses to represent the opening and closing of a narrative comment.
+For the sake of testing, we are going to define some default fsharp options.
 
 ```fsharp
-type Comments = {Opening : string; Closing : string }
-
-options := [
-            "fsharp_comments", {Opening = "(*" + "*"; Closing = "*" + "*)"} :> obj
-            "c_comments"     , {Opening = "/**"; Closing = "**/"} :> obj
-            "cpp_comments" , {Opening = "/**"; Closing = "**/"} :> obj
-            "csharp_comments", {Opening = "/**"; Closing = "**/"} :> obj
-            "java_comments"  , {Opening = "/**"; Closing = "**/"} :> obj
-           ] |> Map.ofList
-
-let getOpening () = ((!options |> Map.find (!language + "_comments")) :?> Comments).Opening
-                    |> List.ofSeq
-let getClosing () = ((!options |> Map.find (!language + "_comments")) :?> Comments).Closing
-                    |> List.ofSeq
-
+let fsharpOptions = {
+    startNarrative  = "(*" + "*"
+    endNarrative    = "*" + "*)"
+    codeSymbols     = Surrounded("`" + "``fsharp", "``" + "`")
+    }
 ```
 
-TODO: review these algorithms for performance when large files are parsed
+The lexer is going to process list of characters. We need functions to check if a list of characters starts
+with certain chars and to return the remaing list after having removed such chars.
+
+BTW: these functions are polymorphic and could be used for other types as well
 
 ```fsharp
-let startsList commentTag l =
-    let c   = System.String(List.toArray commentTag)
-    let t   = System.String (List.toArray l)
-    t.StartsWith c
+let rec startWith startItems listToCheck =
+    match startItems, listToCheck with
+    | [], _             -> true
+    | _ , []            -> false
+    | h1::t1, h2::t2  when h1 = h2  -> startWith t1 t2
+    | _, _              -> false
 
-let isOpening l =
-    let o   = getOpening()
-    startsList o l
-    
-let isClosing l =
-    let o   = getClosing()
-    startsList o l
+let rec remove itemsToRemove listToModify =
+    match itemsToRemove, listToModify with
+    | [], l             -> l
+    | _ , []            -> failwith "Remove not defined on an empty list"
+    | h1::t1, h2::t2  when h1 = h2  -> remove t1 t2
+    | _, _              -> failwith "itemsToRemove are not in the list"
 
-let remainingOpen l =
-    let o   = getOpening()
-    if (List.length l) <= o.Length
-        then []
-        else l |> List.ofSeq |> Seq.skip o.Length |> Seq.toList  
-
-let remainingClose l =
-    let o   = getClosing()
-    if (List.length l) <= o.Length
-        then []
-        else l |> List.ofSeq |> Seq.skip o.Length |> Seq.toList  
-    
-
+let isOpening options       = startWith (List.ofSeq options.startNarrative) 
+let isClosing options       = startWith (List.ofSeq options.endNarrative)
+let remainingOpen options   = remove (List.ofSeq options.startNarrative)
+let remainingClose options  = remove (List.ofSeq options.endNarrative)
 ```
 
-This is a pretty standard lexer / parser combination. Unfortunately it doesn't manage errors in a graceful
-way.
+This is a pretty baic lexer / parser combination.
+
 TODO: consider moving to FSParsec or add error management
 
 ```fsharp
@@ -277,17 +258,17 @@ type Token =
 | CloseComment
 | Text of string
 
-let tokenize source =
+let tokenize options source =
 
     let rec text acc = function
-        | t when isOpening t        -> acc, t 
-        | t when isClosing t        -> acc, t
-        | c :: t                    -> text (acc + c.ToString()) t
-        | []                        -> acc, [] 
+        | t when isOpening options t    -> acc, t 
+        | t when isClosing options t    -> acc, t
+        | c :: t                        -> text (acc + c.ToString()) t
+        | []                            -> acc, [] 
     let rec tokenize' acc = function
-        | []                        -> List.rev acc
-        | t when isOpening t        -> tokenize' (OpenComment::acc)  (remainingOpen t)
-        | t when isClosing t        -> tokenize' (CloseComment::acc) (remainingClose t)
+        | []                            -> List.rev acc
+        | t when isOpening options t    -> tokenize' (OpenComment::acc)  (remainingOpen options t)
+        | t when isClosing options t    -> tokenize' (CloseComment::acc) (remainingClose options t)
         | t                         ->
             let s, t'= text "" t
             tokenize' (Text(s) :: acc) t'
@@ -298,7 +279,7 @@ type Chunk =
 | NarrativeChunk    of Token list
 | CodeChunk         of Token list
 
-let parse source =
+let parse options source =
 
     let rec parseNarrative acc = function
         | OpenComment::t        ->
@@ -324,23 +305,22 @@ let parse source =
         | []                -> List.rev acc
 
     parse' [] (List.ofSeq source)
-
 ```
 
-The flattening part of the algorithm is a bit unusual. At this point we have a parse tree, but we want
-to reduce it to two simple node types containing all the text.
+The flattening part of the algorithm is a bit unusual. At this point we have a parse tree that contains tokens, but we want
+to reduce it to two simple node types containing all the text in string form.
 TODO: consider managing nested comments and comments in strings (the latter has to happen in earlier phases) 
 
 ```fsharp
  
-let flatten chunks =
+let flatten options chunks =
     let tokenToStringNarrative = function
     | OpenComment | CloseComment    -> failwith "Narrative comments cannot be nested"
     | Text(s)                       -> s
 
     let tokenToStringCode = function
     | OpenComment                   -> failwith "Open narrative comment cannot be in code"
-    | CloseComment                  -> string(getClosing () |> List.toArray)
+    | CloseComment                  -> string(options.endNarrative |> Seq.toArray)
     | Text(s)                       -> s
 
     let flattenChunk = function
@@ -350,15 +330,13 @@ let flatten chunks =
         Code(tokens |> List.fold (fun state token -> state + tokenToStringCode token) "")
 
     chunks |> List.fold (fun state chunk -> flattenChunk chunk :: state) [] |> List.rev
-
 ```
 
 We are getting there, now we have a list of blocks we can operate upon
 
 ```fsharp
-blockize := (tokenize >> parse >> flatten)    
+blockize := fun options source -> source |> tokenize options |> parse options |> flatten options
  
-
 ```
 
 Narrative comments phases
@@ -367,39 +345,29 @@ Narrative comments phases
 We need to process all the blocks by adding all the code tags in the right places and removing all empty blocks.
 
 ```fsharp
-type Phase = Block array -> Block array
+type Phase = Options -> Block List -> Block List
 
-let processFirstBlock   = declare<Phase>
-let processLastBlock    = declare<Phase>
-let processMiddleBlocks = declare<Phase>
 let removeEmptyBlocks   = declare<Phase>
 let mergeBlocks         = declare<Phase>
+let addCodeTags         = declare<Phase>
 
-let processPhases l       = (List.toArray
-                             >> !removeEmptyBlocks
-                             >> !mergeBlocks
-                             >> !processFirstBlock
-                             >> !processLastBlock
-                             >> !processMiddleBlocks
-                             ) l
-
-let codeStart ()        = "\n\n```" + !language + "\n"
-let codeEnd   ()        =  "\n\n```\n\n"
-
-let firstCodeStart  ()  = "```" + !language + "\n"
-let lastCodeEnd     ()  = "\n\n```"
-
+let processPhases options blockList = 
+    blockList
+    |> !removeEmptyBlocks options
+    |> !mergeBlocks options
+    |> !addCodeTags options
 ```
 
-We also want to manage how many newlines there are between different blocks, so we'll trim all newlines
+We want to manage how many newlines there are between different blocks, so we'll trim all newlines
 from the start and end of a block, and then add our own.
 
 ```fsharp
-let newLines = [|'\r';'\n'|]
+let NL = System.Environment.NewLine
+
+let newLines = [|'\n';'\r'|]
 
 type System.String with
     member s.TrimNl () = s.Trim(newLines) 
-
 ```
 
 Remove the empty blocks
@@ -412,8 +380,8 @@ let extract = function
     | Code(text)        -> text
     | Narrative(text)   -> text
 
-removeEmptyBlocks := Array.filter (fun b -> (extract b).TrimNl().Trim() <> "")
-
+removeEmptyBlocks := fun options blocks ->
+                        blocks |> List.filter (fun b -> (extract b).TrimNl().Trim() <> "")
 ```
 
 Merge blocks
@@ -427,85 +395,31 @@ let rec mergeBlockList = function
     | []        -> []
     | [a]       -> [a]
     | h1::h2::t -> match h1, h2 with
-                   | Code(t1), Code(t2)             -> mergeBlockList (Code(t1 + "\n" + t2)::t)
-                   | Narrative(n1), Narrative(n2)   -> mergeBlockList(Narrative(n1 + "\n" + n2)::t)
+                   | Code(t1), Code(t2)             -> mergeBlockList (Code(t1 + NL + t2)::t)
+                   | Narrative(n1), Narrative(n2)   -> mergeBlockList(Narrative(n1 + NL + n2)::t)
                    | _, _                           -> h1::mergeBlockList(h2::t)
 
-mergeBlocks :=
-    Array.toList
-    >> mergeBlockList
-    >> List.toArray
-
+mergeBlocks := fun options blocks -> mergeBlockList blocks
 ```
 
-Managing the first block
-------------------------
+Adding code tags
+----------------
 
-You are encouraged to use a comment block as your first block where you specify title, author and date like:  
-
-% title  
-% author(s) (separated by semicolons)  
-% date
-
-For the first block
-
-a. If it is a code block, insert ``LANG\n\n at the top
-b. If it is a comment block put \n\n``LANG\n\n at the end
-  
+Each code block needs a tag at the start and one at the end or it needs to be indented by N chars
 
 ```fsharp
-processFirstBlock := fun blocks ->
-    if blocks.Length = 0
-        then blocks
-        else
-            let newBlock =
-                match blocks.[0] with
-                | Code(text)        -> Code(firstCodeStart() + text.TrimNl())
-                | Narrative(text)   -> Narrative(text.TrimNl() + codeStart ())
-            blocks.[0] <- newBlock
-            blocks
+let indent n (s:string) =
+    let pad = String.replicate n " "
+    pad + s.Replace(NL, NL + pad)
 
-```
-
-Managing the last block
------------------------
-
-For the last block
-    b. If it is a code block, insert \n\n``\n\n at the bottom
-    a. If it is a comment block, at the start \n\n``\n\n
-
-```fsharp
-processLastBlock := fun blocks ->
-    if blocks.Length = 0
-        then blocks
-        else
-            let lastIndex = blocks.Length - 1
-            let newBlock =
-                match blocks.[lastIndex] with
-                | Code(text)        -> Code(text.TrimNl () + codeEnd ())
-                | Narrative(text)   -> Narrative(codeEnd () + text.TrimNl())
-            blocks.[lastIndex] <- newBlock
-            blocks
-
-```
-
-Managing the intermediate blocks
---------------------------------
-
-For each intermediate block
-    a. If it is a code block, do nothing
-    b. If it is a comment block
-        i. At the start, \n\n``\n\n
-        ii. At the end \n\n``LANG\n\n
-
-```fsharp
-processMiddleBlocks := fun blocks ->
-    let lastIndex = blocks.Length - 1
-    let fix = function
-        | Code(text)        -> Code(text.TrimNl ())
-        | Narrative(text)  -> Narrative(codeEnd () + text.TrimNl () + codeStart ())
-    blocks |> Array.mapi (fun i b -> if i <> 0 && i <> lastIndex then fix b else b)
-
+addCodeTags := fun options blocks ->
+    match options.codeSymbols with
+    | Indent(n)         ->
+        blocks |> List.map (function Narrative(s) as nar -> nar | Code(s) -> Code(indent n s))
+    | Surrounded(s, e)  -> 
+        blocks |> List.map (function
+                            | Narrative(text)   -> Narrative(NL + text.TrimNl() + NL)
+                            | Code(text)        -> Code(NL + s + NL + text.TrimNl() + NL + e + NL))
 ```
 
 Putting everything back together
@@ -517,22 +431,27 @@ overall translate function.
 ```fsharp
 let sumBlock s b2 = s + extract b2
 
-let flattenB blocks = blocks |> Array.fold sumBlock ""
+let flattenB blocks = (blocks |> List.fold sumBlock "").TrimStart(newLines)
 
-translate := !blockize >> processPhases >> flattenB
-
+translate := fun options text -> text |> !blockize options |> processPhases options |> flattenB
 ```
 
 Parsing command line arguments
 ------------------------------
 
-Here is a generic command line parser taken from [here](http://fssnip.net/8g).
+Parsing command lines involves writing a function that goes from a sequence of strings to an input file name, output file name and Options record
+
+```fsharp
+let parseCommandLine = declare<string array -> string * string * Options>
+```
+
+To implement it, we are going to use a command line parser taken from [here](http://fssnip.net/8g). The parseArgs function takes a sequence of argument values
+and map them into a (name,value) tuple. It scans the tuple sequence and put command name into all subsequent tuples without name and discard the initial ("","") tuple.
+It then groups tuples by name and converts the tuple sequence into a map of (name,value seq)
 
 ```fsharp
 open  System.Text.RegularExpressions
 
-// parse command using regex
-// if matched, return (command name, command value) as a tuple
 let (|Command|_|) (s:string) =
   let r = new Regex(@"^(?:-{1,2}|\/)(?<command>\w+)[=:]*(?<value>.*)$",RegexOptions.IgnoreCase)
   let m = r.Match(s)
@@ -542,12 +461,7 @@ let (|Command|_|) (s:string) =
   else
     None
 
-// take a sequence of argument values
-// map them into a (name,value) tuple
-// scan the tuple sequence and put command name into all subsequent tuples without name
-// discard the initial ("","") tuple
-// group tuples by name 
-// convert the tuple sequence into a map of (name,value seq)
+
 let parseArgs (args:string seq) =
   args 
   |> Seq.map (fun i -> 
@@ -561,50 +475,111 @@ let parseArgs (args:string seq) =
   |> Seq.map (fun (n,s) -> (n, s |> Seq.map (fun (_,v) -> v) |> Seq.filter (fun i -> i.Length>0)))
   |> Map.ofSeq
 
-// return Some(value) if key is found, None otherwise
-let (?) (m:Map<string,_>) (p:string) = 
+let paramRetrieve (m:Map<string,_>) (p:string) = 
   if Map.containsKey p m
   then Some(m.[p])
   else None
+```
 
+Now we need a function that goes from the map of command line parameters to the input file name, output file name and options. With that we
+can finally define parseCommandLine. For that, we need functions to give us the default value for parameters. 
+
+```fsharp
+let langParamsTable     = [ "fsharp", ("(*" + "*", "*" + "*)")
+                            "c", ("/**", "**/")
+                            "csharp", ("/**", "**/")
+                            "java", ("/**", "**/")] |> Map.ofList
+
+let getLangNoNC lang    =
+    match Map.tryFind lang langParamsTable with
+    | Some(no, nc) -> no, nc
+    | None -> failwith (lang + " is not a valid programming language")
+
+let safeHead errMsg s = if s |> Seq.isEmpty then failwith errMsg else s |> Seq.head 
+
+let paramsToInputs paramsMap =
+    let single p er     = match paramRetrieve paramsMap p with | Some(k) -> Some(k |> safeHead er)
+                                                               | None -> None
+    let get p s         = match paramRetrieve paramsMap p with |Some(k) -> k |> safeHead s
+                                                               | None -> failwith s
+    let defaultP p q er = match paramRetrieve paramsMap p with | Some(k) -> k |> safeHead er
+                                                               | None -> q
+
+    let inputFile       = get "" "You need to pass an input file"
+    let outputFile      = defaultP  "o"
+                                    (System.IO.Path.GetFileNameWithoutExtension(inputFile) + ".mkd")
+                                    "You must pass a parameter to -o"
+
+    let no, nc          = match single "l" "You must pass a language parameter to -l" with
+                          | Some(l) -> getLangNoNC l
+                          | None    ->
+                                get "no" "The no (narrative open) parameter is mandatory, if no -l specified",
+                                get "nc" "The nc (narrative close) parameter is mandatory, if no -l specified"
+
+    let codeSymbs       = match single "indent" "You must pass a whitespace indentation number to -indent" with
+                          | Some(n)     ->
+                                let success, value = System.Int32.TryParse n
+                                if success
+                                    then Indent(value)
+                                    else failwith "-i accepts just an integer value as parameter"                          
+                          | None        ->
+                                Surrounded(
+                                    get "co" "The co (code open) parameter is mandatory, if no -indent specified",
+                                    get "cc" "The cc (code close) parameter is mandatory")
+    inputFile, outputFile, {
+        startNarrative  = no
+        endNarrative    = nc
+        codeSymbols     = codeSymbs
+        }
+
+parseCommandLine := parseArgs >> paramsToInputs
 ```
 
 Main method
 -----------
 
-We can now tie everything together.
+We need a banner and a usage text to print out in case of error.
 
 ```fsharp
 let banner  = "LLiteFs : language friendly literate programming\n"
-let usage   = "Usage: llitefs language inputFile outputFile" +
-              "where 'language' is one of fsharp, csharp, c, cplus, java" +
-              "and 'outputfile' defaults to inputfile.mkd"
-let success = "Success!!"
-let failure = "Failure!!"
+let usage   = @"
+Usage: llitefs inputFile parameters
+where:
+One of the following two sets of parameters is mandatory
+    -no string : string opening a narrative comment
+    -nc string : string closing a narrative comment
+or
+    -l language: where language is one of (fsharp, csharp, c, java)
 
-[<EntryPoint>]
-let main args =
+One of the following two sets of parameters is mandatory
+    -co string : string opening a code block
+    -cc string : string closing a code block
+or
+    -indent N  : indent the code by N whitespaces
+
+The following parameters are optional:
+    -o outFile : defaults to the input file name with mkd extension"
+```
+
+We can then write main as the only side effect function in the program.
+
+```fsharp
+let myMain args =
     try
         printfn "%s" banner
 
-        let pArgs       = args |> parseArgs
-        let ars         = pArgs.[""] |> Seq.toArray
-
-        language        := ars.[0]
-        let inputFile   = ars.[1]
-        let outputFile  = if ars.Length < 3 then inputFile + ".mkd" else ars.[2]
-
+        let inputFile, outputFile, options = !parseCommandLine args
         let input       = System.IO.File.ReadAllText inputFile
-        let output      = !translate input
+        let output      = !translate options input
         System.IO.File.WriteAllText (outputFile, output)
-        printfn "%s" success
         0
     with
     | e ->
-        printfn "%s" failure 
+        printfn "%s" "Failure"
+        printfn "%s" e.Message 
         printfn "%s" usage
-        printfn "%A" e
+#if DEBUG 
+        printfn "\nDetailed Error Below:\n%A" e
+#endif
         -1
-
 ```
-

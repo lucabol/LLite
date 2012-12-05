@@ -24,7 +24,7 @@
     <PlatformTarget>AnyCPU</PlatformTarget>
     <DocumentationFile>bin\Debug\LiterateProgramming.XML</DocumentationFile>
     <Prefer32Bit>true</Prefer32Bit>
-    <StartArguments>fsharp program.fs</StartArguments>
+    <StartArguments>program.fs -l fsharp -co "```fsharp" -cc "```"</StartArguments>
     <StartAction>Project</StartAction>
     <StartProgram>C:\Projects\LLite\bin\Debug\generateHtml.bat</StartProgram>
   </PropertyGroup>
@@ -50,10 +50,10 @@
     <Reference Include="System.Numerics" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Tests.fs" />
     <Compile Include="Program.fs">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Compile>
+    <Compile Include="Tests.fs" />
     <None Include="App.config" />
     <None Include="generateHtml.bat">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
@@ -63,6 +63,12 @@
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
     <None Include="README.md" />
+    <None Include="generateHtmlFromIndented.bat">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Include="LLiteFsIndent.bat">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
   </ItemGroup>
   <PropertyGroup>
     <MinimumVisualStudioVersion Condition="'$(MinimumVisualStudioVersion)' == ''">11</MinimumVisualStudioVersion>
