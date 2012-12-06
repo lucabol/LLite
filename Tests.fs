@@ -1,5 +1,11 @@
 ﻿module Tests
-open LLiteFs
+open LLite
+
+let fsharpOptions = {
+    startNarrative  = "(*" + "*"
+    endNarrative    = "*" + "*)"
+    codeSymbols     = Surrounded("`" + "``fsharp", "``" + "`")
+    }
 
 let testTokenizer () =
     let data =
