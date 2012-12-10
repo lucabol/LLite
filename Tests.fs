@@ -10,10 +10,10 @@ let fsharpOptions = {
 let testTokenizer () =
     let data =
         [
-         "afaf(** afafa **) afafa", [Text "afaf"; OpenComment; Text " afafa "; CloseComment; Text " afafa"]
-         "(** aaf  (** afaf **) faf **)", [OpenComment; Text " aaf  "; OpenComment; Text " afaf "; CloseComment;Text " faf "; CloseComment]
+         "afaf(** afafa **) afafa", [Text "afaf"; OpenComment(0); Text " afafa "; CloseComment(0); Text " afafa"]
+         "(** aaf  (** afaf **) faf **)", [OpenComment(0); Text " aaf  "; OpenComment(0); Text " afaf "; CloseComment(0);Text " faf "; CloseComment(0)]
          "", []
-         "(****)", [OpenComment; CloseComment]
+         "(****)", [OpenComment(0); CloseComment(0)]
          "fafdaf", [Text "fafdaf"]
         ]
     let result = data |> List.forall (fun (t, r) -> r = tokenize fsharpOptions t)

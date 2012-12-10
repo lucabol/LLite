@@ -197,27 +197,34 @@ let remainingClose options  = remove (List.ofSeq options.endNarrative)
 This is a pretty basic tokenizer. It just analyzes the start of the text and returns what it finds.
 
 ```fsharp
+let NL = System.Environment.NewLine
+
 type Token =
-| OpenComment
-| CloseComment
-| Text of string
+| OpenComment   of int
+| CloseComment  of int
+| Text          of string
 
 let tokenize options source =
+
+    let startWithNL list = startWith (Seq.toList NL) list
 
     let rec text acc = function
         | t when isOpening options t    -> acc, t 
         | t when isClosing options t    -> acc, t
         | c :: t                        -> text (acc + c.ToString()) t
         | []                            -> acc, [] 
-    let rec tokenize' acc = function
+    let rec tokenize' line acc = function
         | []                            -> List.rev acc
-        | t when isOpening options t    -> tokenize' (OpenComment::acc)  (remainingOpen options t)
-        | t when isClosing options t    -> tokenize' (CloseComment::acc) (remainingClose options t)
-        | t                         ->
+        | t when isOpening options t    -> tokenize' line
+                                            (OpenComment(line)::acc)  (remainingOpen options t)
+        | t when isClosing options t    -> tokenize' line
+                                            (CloseComment(line)::acc) (remainingClose options t)
+        | t                             ->
+            let line' = if startWithNL t then line + 1 else line
             let s, t'= text "" t
-            tokenize' (Text(s) :: acc) t'
+            tokenize' line' (Text(s) :: acc) t'
 
-    tokenize' [] (List.ofSeq source)
+    tokenize' 0 [] (List.ofSeq source)
 ```
 
 ###Parser
@@ -232,26 +239,28 @@ type Chunk =
 let parse options source =
 
     let rec parseNarrative acc = function
-        | OpenComment::t        ->
-            failwith "Don't open narrative comments inside narrative comments"
-        | CloseComment::t       -> acc, t
-        | Text(s)::t            -> parseNarrative (Text(s)::acc) t
-        | []                    -> failwith "You haven't closed your last narrative comment"
+        | OpenComment(l)::t         ->
+            failwith ("Don't open narrative comments inside narrative comments at line "
+                                                                                    + l.ToString())
+        | CloseComment(_)::t        -> acc, t
+        | Text(s)::t                -> parseNarrative (Text(s)::acc) t
+        | []                        -> failwith "You haven't closed your last narrative comment"
 
     let rec parseCode acc = function
-        | OpenComment::t as t'  -> acc, t'
-        | CloseComment::t       -> parseCode (CloseComment::acc) t
-        | Text(s)::t            -> parseCode (Text(s)::acc) t
-        | []                    -> acc, []
+        | OpenComment(_)::t as t'   -> acc, t'
+        | CloseComment(l)::t        -> parseCode (CloseComment(l)::acc) t
+        | Text(s)::t                -> parseCode (Text(s)::acc) t
+        | []                        -> acc, []
     let rec parse' acc = function
-        | OpenComment::t    ->
+        | OpenComment(_)::t         ->
             let narrative, t' = parseNarrative [] t
             parse' (NarrativeChunk(narrative)::acc) t' 
-        | Text(s)::t        ->
+        | Text(s)::t                ->
             let code, t' = parseCode [Text(s)] t
             parse' (CodeChunk(code)::acc) t'
-        | CloseComment::t   ->
-            failwith "Don't insert a close narrative comment at the start of your program"
+        | CloseComment(l)::t           ->
+            failwith ("Don't insert a close narrative comment at the start of your program at line "
+                                                                                    + l.ToString())
         | []                -> List.rev acc
 
     parse' [] (List.ofSeq source)
@@ -265,15 +274,16 @@ to reduce it to two simple node types containing all the text in string form.
 TODO: consider managing nested comments and comments in strings (the latter has to happen in earlier phases) 
 
 ```fsharp
- 
 let flatten options chunks =
     let tokenToStringNarrative = function
-    | OpenComment | CloseComment    -> failwith "Narrative comments cannot be nested"
-    | Text(s)                       -> s
+    | OpenComment(l) | CloseComment(l)  -> failwith ("Narrative comments cannot be nested at line "
+                                                                                    + l.ToString())
+    | Text(s)                           -> s
 
     let tokenToStringCode = function
-    | OpenComment                   -> failwith "Open narrative comment cannot be in code"
-    | CloseComment                  -> string(options.endNarrative |> Seq.toArray)
+    | OpenComment(l)                -> failwith ("Open narrative comment cannot be in code at lien"
+                                                                                    + l.ToString())
+    | CloseComment(_)               -> string(options.endNarrative |> Seq.toArray)
     | Text(s)                       -> s
 
     let flattenChunk = function
@@ -317,8 +327,6 @@ to have a good view of how many newline to keep from comment blocks and code blo
 We'll trim all newlines from the start and end of a block, and then add our own.
 
 ```fsharp
-let NL = System.Environment.NewLine
-
 let newLines = [|'\n';'\r'|]
 
 type System.String with

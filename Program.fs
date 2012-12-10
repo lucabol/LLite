@@ -156,7 +156,6 @@ let blockize = declare<Options -> string -> Block list>
 I could have used regular expressions to parse the program, but it seemed ugly. I could also have used FsParsec,
 but that brings with it an additional dll. So I decided to roll my own parser. This has several problems:
 
-* It doesn't report errors nicely
 * It is probably very slow
 * It doesn't allow narrative comments inside comments, in particular it doesn't allow the opening comment
 * It doesn't allow opening comments in the program code (not even inside a string)
@@ -199,29 +198,38 @@ let remainingClose options  = remove (List.ofSeq options.endNarrative)
 
 (**
 This is a pretty basic tokenizer. It just analyzes the start of the text and returns what it finds.
+It also keeps track of the line number for the sake of reporting it in the error message.
 **)
 
+let NL = System.Environment.NewLine
+
 type Token =
-| OpenComment
-| CloseComment
-| Text of string
+| OpenComment   of int
+| CloseComment  of int
+| Text          of string
 
 let tokenize options source =
 
-    let rec text acc = function
-        | t when isOpening options t    -> acc, t 
-        | t when isClosing options t    -> acc, t
-        | c :: t                        -> text (acc + c.ToString()) t
-        | []                            -> acc, [] 
-    let rec tokenize' acc = function
-        | []                            -> List.rev acc
-        | t when isOpening options t    -> tokenize' (OpenComment::acc)  (remainingOpen options t)
-        | t when isClosing options t    -> tokenize' (CloseComment::acc) (remainingClose options t)
-        | t                         ->
-            let s, t'= text "" t
-            tokenize' (Text(s) :: acc) t'
+    let startWithNL = startWith (Seq.toList NL)
 
-    tokenize' [] (List.ofSeq source)
+    let rec text line acc = function
+        | t when isOpening options t    -> line, acc, t 
+        | t when isClosing options t    -> line, acc, t
+        | c :: t as full                ->
+            let line' = if startWithNL full then line + 1 else line
+            text line' (acc + c.ToString()) t
+        | []                            -> line, acc, [] 
+    let rec tokenize' line acc = function
+        | []                            -> List.rev acc
+        | t when isOpening options t    -> tokenize' line
+                                            (OpenComment(line)::acc)  (remainingOpen options t)
+        | t when isClosing options t    -> tokenize' line
+                                            (CloseComment(line)::acc) (remainingClose options t)
+        | t                             ->
+            let line, s, t'= text line "" t
+            tokenize' line (Text(s) :: acc) t'
+
+    tokenize' 1 [] (List.ofSeq source)
 
 (**
 ###Parser
@@ -236,26 +244,28 @@ type Chunk =
 let parse options source =
 
     let rec parseNarrative acc = function
-        | OpenComment::t        ->
-            failwith "Don't open narrative comments inside narrative comments"
-        | CloseComment::t       -> acc, t
-        | Text(s)::t            -> parseNarrative (Text(s)::acc) t
-        | []                    -> failwith "You haven't closed your last narrative comment"
+        | OpenComment(l)::t         ->
+            failwith ("Don't open narrative comments inside narrative comments at line "
+                                                                                    + l.ToString())
+        | CloseComment(_)::t        -> acc, t
+        | Text(s)::t                -> parseNarrative (Text(s)::acc) t
+        | []                        -> failwith "You haven't closed your last narrative comment"
 
     let rec parseCode acc = function
-        | OpenComment::t as t'  -> acc, t'
-        | CloseComment::t       -> parseCode (CloseComment::acc) t
-        | Text(s)::t            -> parseCode (Text(s)::acc) t
-        | []                    -> acc, []
+        | OpenComment(_)::t as t'   -> acc, t'
+        | CloseComment(l)::t        -> parseCode (CloseComment(l)::acc) t
+        | Text(s)::t                -> parseCode (Text(s)::acc) t
+        | []                        -> acc, []
     let rec parse' acc = function
-        | OpenComment::t    ->
+        | OpenComment(_)::t         ->
             let narrative, t' = parseNarrative [] t
             parse' (NarrativeChunk(narrative)::acc) t' 
-        | Text(s)::t        ->
+        | Text(s)::t                ->
             let code, t' = parseCode [Text(s)] t
             parse' (CodeChunk(code)::acc) t'
-        | CloseComment::t   ->
-            failwith "Don't insert a close narrative comment at the start of your program"
+        | CloseComment(l)::t           ->
+            failwith ("Don't insert a close narrative comment at the start of your program at line "
+                                                                                    + l.ToString())
         | []                -> List.rev acc
 
     parse' [] (List.ofSeq source)
@@ -269,15 +279,19 @@ to reduce it to two simple node types containing all the text in string form.
 
 TODO: consider managing nested comments and comments in strings (the latter has to happen in earlier phases) 
 **)
- 
+
 let flatten options chunks =
     let tokenToStringNarrative = function
-    | OpenComment | CloseComment    -> failwith "Narrative comments cannot be nested"
-    | Text(s)                       -> s
+    | OpenComment(l) | CloseComment(l)  -> failwith ("Narrative comments cannot be nested at line "
+                                                                                    + l.ToString())
+    | Text(s)                           -> s
 
     let tokenToStringCode = function
-    | OpenComment                   -> failwith "Open narrative comment cannot be in code"
-    | CloseComment                  -> string(options.endNarrative |> Seq.toArray)
+    | OpenComment(l)                -> failwith ("Open narrative comment cannot be in code at line"
+                                                                + l.ToString()) +
+                                                 ". Perhaps you have an open comment in" +
+                                                 " a code string before this comment tag?"
+    | CloseComment(_)               -> string(options.endNarrative |> Seq.toArray)
     | Text(s)                       -> s
 
     let flattenChunk = function
@@ -319,8 +333,6 @@ We want to manage how many newlines there are between different blocks, because 
 to have a good view of how many newline to keep from comment blocks and code blocks.
 We'll trim all newlines from the start and end of a block, and then add our own.
 **)
-
-let NL = System.Environment.NewLine
 
 let newLines = [|'\n';'\r'|]
 
