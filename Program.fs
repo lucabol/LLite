@@ -507,24 +507,32 @@ We can then write main as the only side effect function in the program. Here is 
 
 let banner  = "LLite : language friendly literate programming\n"
 
-let myMain args =
-    try
-        printfn "%s" banner
+let printMemory () =
+    let bytesInMeg = 1048576.
+    let peak = System.Diagnostics.Process.GetCurrentProcess().PeakWorkingSet64
+    let work = System.Diagnostics.Process.GetCurrentProcess().WorkingSet64
+    printfn "Peak working set: %A" ((float) peak / bytesInMeg)
+    printfn "Working set: %A" ((float) peak / bytesInMeg)
 
-        let inputFile, outputFile, options = !parseCommandLine args
-        let input       = System.IO.File.ReadAllText inputFile
-        let output      = !translate options input
-        System.IO.File.WriteAllText (outputFile, output)
-        0
-    with
-    | e ->
-        printfn "%s" "Failure"
-        printfn "%s" e.Message 
-        printfn "%s" usage
-#if DEBUG 
-        printfn "\nDetailed Error Below:\n%A" e
-#endif
-        -1
+let myMain args =
+        try
+
+            let inputFile, outputFile, options = !parseCommandLine args
+            let input       = System.IO.File.ReadAllText inputFile
+            let output      = !translate options input
+            System.IO.File.WriteAllText (outputFile, output)
+
+            //printMemory ()
+            0
+        with
+        | e ->
+            printfn "%s" "Failure"
+            printfn "%s" e.Message 
+            printfn "%s" usage
+    #if DEBUG 
+            printfn "\nDetailed Error Below:\n%A" e
+    #endif
+            -1
 
 (**
 An aside: forward declaring functions in F#
