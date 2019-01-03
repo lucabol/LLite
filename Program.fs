@@ -471,7 +471,7 @@ let paramsToInputs paramsMap =
 
     let inputFile       = get "" "You need to pass an input file"
     let outputFile      = defaultP  "o"
-                                    (System.IO.Path.GetFileNameWithoutExtension(inputFile) + ".mkd")
+                                    (System.IO.Path.GetFileNameWithoutExtension(inputFile:string) + ".mkd")
                                     "You must pass a parameter to -o"
 
     let no, nc          = match single "l" "You must pass a language parameter to -l" with
@@ -625,3 +625,6 @@ To my way of seeing, this is the most cumbersome solution and conceptually disho
 reasons, but just for the sake of explaining things. In a way, you are changing the signature of your functions for the sake of writing a book.
 That can't be right ... 
 **)
+
+[<EntryPoint>]
+let main args = myMain args
